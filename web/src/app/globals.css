@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Polymad reads as a trading terminal / departure board, not a SaaS dashboard:
+/* PolMad reads as a trading terminal / departure board, not a SaaS dashboard:
    monospace throughout, hard corners, hairline rules, one acid accent. The visual
    language is "instrument you read fast under pressure", which is what someone
    about to sign a transaction is actually doing. */
@@ -14,6 +14,9 @@
   --muted: #8b949e;
 
   --acid: #c8ff2f;
+  /* Sampled from the logo. Monad purple, used as the CREATOR-mode accent so the
+     brand colour carries meaning instead of just decorating. */
+  --brand: #6858f8;
   --safe: #3ddc97;
   --rug: #ff4d5e;
   --warn: #ffb703;
@@ -27,6 +30,7 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-acid: var(--acid);
+  --color-brand: var(--brand);
   --color-safe: var(--safe);
   --color-rug: var(--rug);
   --color-warn: var(--warn);

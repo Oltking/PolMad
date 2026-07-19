@@ -100,7 +100,7 @@ contract TokenFactory {
         // try/catch because a failing registry must never block a launch — the
         // attestation is a bonus, not a dependency.
         if (address(trustRegistry) != address(0)) {
-            try trustRegistry.attest(block.chainid, token, 0, keccak256(abi.encodePacked("polymad-launchpad-v1", token))) {
+            try trustRegistry.attest(block.chainid, token, 0, keccak256(abi.encodePacked("polmad-launchpad-v1", token))) {
                 // attested
             } catch {
                 // Registry unavailable; the launch itself is unaffected.

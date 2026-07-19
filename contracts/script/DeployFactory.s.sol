@@ -8,7 +8,7 @@ import {TokenFactory} from "../src/TokenFactory.sol";
 /// launch attests on-chain that it has no owner backdoors.
 ///
 ///   TRUST_REGISTRY=0x... forge script script/DeployFactory.s.sol:DeployFactory \
-///     --rpc-url <rpc> --account polymad-deployer \
+///     --rpc-url <rpc> --account polmad-deployer \
 ///     --sender <your address> --broadcast
 contract DeployFactory is Script {
     address constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;

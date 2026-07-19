@@ -72,7 +72,7 @@ export default function CreatePage() {
       decimals,
       image: logo?.png ?? "",
       description: brief.trim(),
-      launchedVia: "polymad-launchpad-v1",
+      launchedVia: "polmad-launchpad-v1",
     };
     const metadataURI = `data:application/json;base64,${btoa(unescape(encodeURIComponent(JSON.stringify(metadata))))}`;
 
@@ -138,7 +138,7 @@ export default function CreatePage() {
         <p className="mt-3 text-sm text-[var(--muted)] leading-relaxed">
           No owner. No mint function. No pause. No blacklist. Not a promise — the contract
           physically has no code to do those things, and every launch writes proof of that
-          on-chain to Polymad&apos;s TrustRegistry.
+          on-chain to PolMad&apos;s TrustRegistry.
         </p>
       </div>
 

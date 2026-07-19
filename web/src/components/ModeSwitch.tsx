@@ -10,9 +10,24 @@ import { usePathname, useRouter } from "next/navigation";
 ///
 /// Kept as a segmented control rather than a dropdown: mode is a place you are,
 /// not a setting you configure, so both options stay visible at all times.
+/// Each mode carries its own accent: acid for RADAR (the terminal/instrument
+/// surface), the logo's purple for CREATOR. Colour does real work here — it tells
+/// you which product you are in before you read a word.
 const MODES = [
-  { key: "radar", label: "RADAR", href: "/", match: (p: string) => !p.startsWith("/create") && !p.startsWith("/launches") },
-  { key: "creator", label: "CREATOR", href: "/create", match: (p: string) => p.startsWith("/create") || p.startsWith("/launches") },
+  {
+    key: "radar",
+    label: "RADAR",
+    href: "/",
+    accent: "var(--acid)",
+    match: (p: string) => !p.startsWith("/create") && !p.startsWith("/launches"),
+  },
+  {
+    key: "creator",
+    label: "CREATOR",
+    href: "/create",
+    accent: "var(--brand)",
+    match: (p: string) => p.startsWith("/create") || p.startsWith("/launches"),
+  },
 ];
 
 export function ModeSwitch() {
@@ -29,8 +44,8 @@ export function ModeSwitch() {
             onClick={() => router.push(m.href)}
             className="px-3 py-1.5 text-[10px] tracking-widest transition-colors"
             style={{
-              background: active ? "var(--acid)" : "transparent",
-              color: active ? "#08090a" : "var(--muted)",
+              background: active ? m.accent : "transparent",
+              color: active ? (m.key === "creator" ? "#ffffff" : "#08090a") : "var(--muted)",
               fontWeight: active ? 700 : 400,
             }}
           >

@@ -1,4 +1,4 @@
-# Polymad
+# PolMad
 
 **Paste an address. See the score. Bet on the outcome.**
 
@@ -91,14 +91,14 @@ forge test                  # 28 tests
 Deploy to Monad testnet (needs a funded deployer — get MON at https://faucet.monad.xyz):
 
 ```bash
-cast wallet import polymad-deployer --interactive   # paste your private key
+cast wallet import polmad-deployer --interactive   # paste your private key
 
 RESOLVER=<keeper wallet address> \
 MINTER=<backend wallet address> \
 DEPLOY_MOCK=true \
 forge script script/Deploy.s.sol:Deploy \
   --rpc-url https://testnet-rpc.monad.xyz \
-  --account polymad-deployer \
+  --account polmad-deployer \
   --broadcast
 ```
 
@@ -156,4 +156,4 @@ a real rug during a 3-minute demo:
 - If nobody takes the winning side, the losing side is refunded rather than having
   the pool stranded in the contract forever.
 
-**None of this is financial advice, and a Polymad report is not an audit.**
+**None of this is financial advice, and a PolMad report is not an audit.**

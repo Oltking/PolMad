@@ -6,7 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @title LaunchpadToken
 /// @notice A token that CANNOT rug, by construction rather than by promise.
 ///
-///         Polymad exists to warn people about contracts with owner backdoors. It
+///         PolMad exists to warn people about contracts with owner backdoors. It
 ///         would be indefensible to ship a launcher that produces them. So this
 ///         contract deliberately has no privileged surface at all:
 ///
@@ -17,7 +17,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 ///
 ///         The entire supply goes to the creator at deploy time. Whatever they do
 ///         with it afterwards (lock it, LP it, dump it) is visible on-chain and is
-///         exactly the kind of thing Polymad's market layer is for pricing.
+///         exactly the kind of thing PolMad's market layer is for pricing.
 ///
 ///         What this does NOT protect against, stated plainly so nobody mistakes
 ///         "no backdoor" for "safe": the creator still holds tokens and can sell

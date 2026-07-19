@@ -7,11 +7,11 @@ import {PropheyMarket} from "../src/PropheyMarket.sol";
 import {VerifierBadge} from "../src/VerifierBadge.sol";
 import {MockRugToken} from "../src/MockRugToken.sol";
 
-/// @notice Deploys the full Polymad stack to Monad testnet.
+/// @notice Deploys the full PolMad stack to Monad testnet.
 ///
 ///   forge script script/Deploy.s.sol:Deploy \
 ///     --rpc-url https://testnet-rpc.monad.xyz \
-///     --account polymad-deployer --broadcast
+///     --account polmad-deployer --broadcast
 ///
 /// Env (all optional, default to the deployer address):
 ///   RESOLVER   — keeper wallet allowed to call PropheyMarket.resolve
@@ -35,7 +35,7 @@ contract Deploy is Script {
 
         address resolver = vm.envOr("RESOLVER", deployer);
         address minter = vm.envOr("MINTER", deployer);
-        string memory badgeURI = vm.envOr("BADGE_URI", string("https://polymad.local/api/badge/"));
+        string memory badgeURI = vm.envOr("BADGE_URI", string("https://polmad.local/api/badge/"));
         bool deployMock = vm.envOr("DEPLOY_MOCK", false);
 
         vm.startBroadcast();

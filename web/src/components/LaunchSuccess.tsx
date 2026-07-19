@@ -38,7 +38,7 @@ export function LaunchSuccess({
   const explorer = network.chain.blockExplorers.default.url;
 
   const metadata = JSON.stringify(
-    { name, symbol, decimals, address: token, chainId: network.id, image: logoPng ? "<png data uri>" : "", launchedVia: "polymad-launchpad-v1" },
+    { name, symbol, decimals, address: token, chainId: network.id, image: logoPng ? "<png data uri>" : "", launchedVia: "polmad-launchpad-v1" },
     null,
     2,
   );
@@ -50,7 +50,7 @@ export function LaunchSuccess({
 
   const shareText = `I launched ${name} ($${symbol}) on @monad — with no mint function, no owner, and no pause switch.
 
-It literally cannot rug. Verified on-chain by Polymad.
+It literally cannot rug. Verified on-chain by PolMad.
 
 ${explorer}/address/${token}`;
 

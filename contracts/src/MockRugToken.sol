@@ -5,7 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title MockRugToken
-/// @notice DEMO ONLY. A deliberately unsafe ERC-20 with the exact backdoors Polymad
+/// @notice DEMO ONLY. A deliberately unsafe ERC-20 with the exact backdoors PolMad
 ///         scores against, so the resolution flow can be triggered live on stage
 ///         instead of waiting for a real rug to happen during a 3-minute demo.
 ///

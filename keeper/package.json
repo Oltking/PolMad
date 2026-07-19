@@ -1,9 +1,9 @@
 {
-  "name": "polymad-keeper",
+  "name": "polmad-keeper",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Off-chain resolver for Polymad Prophecy Calls",
+  "description": "Off-chain resolver for PolMad Prophecy Calls",
   "scripts": {
     "start": "tsx --env-file-if-exists=.env src/keeper.ts",
     "once": "tsx --env-file-if-exists=.env src/keeper.ts --once",

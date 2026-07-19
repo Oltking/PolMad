@@ -16,7 +16,7 @@ import {
   type RugFinding,
 } from "./detectors.js";
 
-/// Polymad keeper.
+/// PolMad keeper.
 ///
 /// Polls open Calls on PropheyMarket (Monad), checks each target contract on its
 /// *native* chain for the three deterministic rug triggers in spec §6, and calls

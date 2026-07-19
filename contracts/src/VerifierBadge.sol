@@ -47,7 +47,7 @@ contract VerifierBadge is ERC721, Ownable {
     }
 
     constructor(address initialOwner, address initialMinter, string memory baseURI_)
-        ERC721("Polymad Verifier Badge", "PVB")
+        ERC721("PolMad Verifier Badge", "PVB")
         Ownable(initialOwner)
     {
         if (initialMinter == address(0)) revert ZeroAddress();

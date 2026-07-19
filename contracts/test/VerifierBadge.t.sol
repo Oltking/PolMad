@@ -19,7 +19,7 @@ contract VerifierBadgeTest is Test {
     uint256 constant TOP_10_WEEKLY = 3;
 
     function setUp() public {
-        badge = new VerifierBadge(owner, minter, "https://polymad.xyz/badge/");
+        badge = new VerifierBadge(owner, minter, "https://polmad.xyz/badge/");
     }
 
     function test_mintBadge_assignsTypeAndOwnership() public {
@@ -29,7 +29,7 @@ contract VerifierBadgeTest is Test {
         assertEq(badge.ownerOf(id), alice);
         assertEq(badge.badgeTypeOf(id), FIRST_CORRECT_CALL);
         assertEq(badge.badgesOf(alice).length, 1);
-        assertEq(badge.tokenURI(id), "https://polymad.xyz/badge/0.json");
+        assertEq(badge.tokenURI(id), "https://polmad.xyz/badge/0.json");
     }
 
     function test_mintBadge_onlyMinter() public {

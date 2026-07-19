@@ -4,8 +4,8 @@ import { useState } from "react";
 import { parseEther, formatEther } from "viem";
 import { useAccount, useEstimateGas, useWaitForTransactionReceipt, useWriteContract, useBalance } from "wagmi";
 import { encodeFunctionData } from "viem";
-import { PROPHEY_MARKET, propheyMarketAbi } from "@/lib/contracts";
-import { monadTestnet } from "@/lib/chains";
+import { propheyMarketAbi } from "@/lib/contracts";
+import { useNetwork } from "@/lib/network-context";
 import { OddsBar, fmt } from "./OddsBar";
 import type { CallData } from "@/hooks/useCalls";
 
@@ -25,6 +25,8 @@ export function StakeModal({
   onDone?: () => void;
 }) {
   const { address, chainId } = useAccount();
+  const { network } = useNetwork();
+  const market = network.deployment.propheyMarket;
   const [side, setSide] = useState<"safe" | "rug" | null>(null);
   const [amount, setAmount] = useState("0.1");
 
@@ -33,14 +35,14 @@ export function StakeModal({
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
   const parsed = safeParse(amount);
-  const wrongChain = chainId !== monadTestnet.id;
+  const wrongChain = chainId !== network.id;
   const belowMin = parsed !== null && parsed < parseEther(String(MIN_STAKE_MON));
   const overBalance = parsed !== null && balance ? parsed > balance.value : false;
 
   // Gas is estimated against the real calldata so the number shown is the number
   // that will be charged, not a guess.
   const { data: gasEstimate } = useEstimateGas({
-    to: PROPHEY_MARKET,
+    to: market,
     value: parsed ?? 0n,
     data: side
       ? encodeFunctionData({
@@ -58,7 +60,7 @@ export function StakeModal({
   function submit() {
     if (!canSubmit || !side || parsed === null) return;
     writeContract({
-      address: PROPHEY_MARKET,
+      address: market,
       abi: propheyMarketAbi,
       functionName: "stake",
       args: [call.id, side === "rug"],
@@ -81,7 +83,7 @@ export function StakeModal({
             for call #{call.id.toString()}.
           </p>
           <a
-            href={`${monadTestnet.blockExplorers.default.url}/tx/${txHash}`}
+            href={`${network.chain.blockExplorers.default.url}/tx/${txHash}`}
             target="_blank"
             rel="noreferrer"
             className="block text-[11px] text-[var(--acid)] break-all hover:underline"
@@ -147,19 +149,19 @@ export function StakeModal({
 
         {/* Exact target of the transaction, always visible before signing. */}
         <div className="border border-[var(--line)] bg-[var(--surface-2)] p-3 space-y-1 text-[10px]">
-          <Row label="contract" value={PROPHEY_MARKET} mono />
+          <Row label="contract" value={market} mono />
           <Row label="function" value={`stake(${call.id}, ${side === "rug"})`} />
           <Row label="value" value={`${amount || "0"} MON`} />
           <Row
             label="est. gas"
             value={gasEstimate ? `${gasEstimate.toString()} units` : side ? "estimating…" : "pick a side"}
           />
-          <Row label="network" value="Monad Testnet (10143)" />
+          <Row label="network" value={`${network.label} (${network.id})`} />
         </div>
 
         {wrongChain && (
           <p className="text-[11px] text-[var(--warn)]">
-            Wrong network. Switch your wallet to Monad Testnet to stake.
+            Wrong network. Switch your wallet to {network.label} to stake.
           </p>
         )}
         {parsed === null && amount !== "" && (

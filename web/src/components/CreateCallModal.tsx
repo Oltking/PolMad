@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { isAddress, getAddress } from "viem";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { PROPHEY_MARKET, propheyMarketAbi } from "@/lib/contracts";
-import { SUPPORTED_CHAINS, monadTestnet } from "@/lib/chains";
+import { propheyMarketAbi } from "@/lib/contracts";
+import { SUPPORTED_CHAINS } from "@/lib/chains";
+import { useNetwork } from "@/lib/network-context";
 
 /// Window presets. 72h is the spec default; the shorter options exist because a
 /// hackathon demo cannot wait three days, and the contract allows anything from
@@ -26,6 +27,8 @@ export function CreateCallModal({
   prefillChain?: number;
 }) {
   const { chainId: walletChain } = useAccount();
+  const { network } = useNetwork();
+  const market = network.deployment.propheyMarket;
   const [target, setTarget] = useState(prefillTarget ?? "");
   const [targetChain, setTargetChain] = useState(prefillChain ?? SUPPORTED_CHAINS[0].id);
   const [windowSeconds, setWindowSeconds] = useState(259_200);
@@ -34,12 +37,12 @@ export function CreateCallModal({
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
   const valid = isAddress(target.trim());
-  const wrongChain = walletChain !== monadTestnet.id;
+  const wrongChain = walletChain !== network.id;
 
   function submit() {
     if (!valid) return;
     writeContract({
-      address: PROPHEY_MARKET,
+      address: market,
       abi: propheyMarketAbi,
       functionName: "createCall",
       args: [BigInt(targetChain), getAddress(target.trim()), BigInt(windowSeconds)],
@@ -61,7 +64,7 @@ export function CreateCallModal({
             <>
               <p className="text-sm">Call created. It is now open for staking.</p>
               <a
-                href={`${monadTestnet.blockExplorers.default.url}/tx/${txHash}`}
+                href={`${network.chain.blockExplorers.default.url}/tx/${txHash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block text-[11px] text-[var(--acid)] break-all hover:underline"
@@ -123,8 +126,7 @@ export function CreateCallModal({
 
               {wrongChain && (
                 <p className="text-[11px] text-[var(--warn)]">
-                  Switch your wallet to Monad Testnet — calls live on Monad regardless of the target
-                  chain.
+                  Switch your wallet to {network.label} — calls live on Monad regardless of the target chain.
                 </p>
               )}
               {target.trim() && !valid && (

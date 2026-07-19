@@ -1,8 +1,16 @@
 import { defineChain, createPublicClient, http, type PublicClient } from "viem";
 import { mainnet, base } from "viem/chains";
 
-/// Monad testnet. Chain id and RPC are the values confirmed in the spec — do not
-/// guess these, a wrong chain id silently sends transactions nowhere useful.
+/// Chain ids verified against the live RPCs — a wrong chain id sends transactions
+/// nowhere useful, or worse, somewhere real.
+export const monadMainnet = defineChain({
+  id: 143,
+  name: "Monad",
+  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.monad.xyz"] } },
+  blockExplorers: { default: { name: "MonadScan", url: "https://monadscan.com" } },
+});
+
 export const monadTestnet = defineChain({
   id: 10143,
   name: "Monad Testnet",
@@ -19,12 +27,14 @@ export const monadTestnet = defineChain({
 /// because its RPC story is identical to Ethereum's and it costs nothing to keep.
 export const WATCHED_CHAINS = {
   [monadTestnet.id]: monadTestnet,
+  [monadMainnet.id]: monadMainnet,
   [mainnet.id]: mainnet,
   [base.id]: base,
 } as const;
 
 const rpcOverrides: Record<number, string | undefined> = {
   [monadTestnet.id]: process.env.MONAD_RPC_URL,
+  [monadMainnet.id]: process.env.MONAD_MAINNET_RPC_URL,
   [mainnet.id]: process.env.ETHEREUM_RPC_URL,
   [base.id]: process.env.BASE_RPC_URL,
 };

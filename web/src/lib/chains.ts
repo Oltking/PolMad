@@ -1,17 +1,9 @@
-import { defineChain } from "viem";
 import { mainnet, base } from "viem/chains";
+import { monadTestnet, monadMainnet } from "./networks";
 
-/// Monad testnet — values confirmed from the spec, never guessed.
-export const monadTestnet = defineChain({
-  id: 10143,
-  name: "Monad Testnet",
-  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
-  rpcUrls: { default: { http: ["https://testnet-rpc.monad.xyz"] } },
-  blockExplorers: {
-    default: { name: "MonadVision", url: "https://testnet.monadvision.com" },
-  },
-  testnet: true,
-});
+/// Monad chain definitions live in networks.ts (the staking networks); re-exported
+/// here so report-side code has one import for "chains we can analyse".
+export { monadTestnet, monadMainnet };
 
 export interface SupportedChain {
   id: number;
@@ -47,12 +39,19 @@ export const SUPPORTED_CHAINS: SupportedChain[] = [
     coverage: "full",
   },
   {
-    id: monadTestnet.id,
-    label: "Monad Testnet",
-    explorerUrl: "https://testnet.monadvision.com",
-    rpcUrls: ["https://testnet-rpc.monad.xyz", "https://rpc.ankr.com/monad_testnet"],
+    id: monadMainnet.id,
+    label: "Monad",
+    explorerUrl: "https://monadscan.com",
+    rpcUrls: ["https://rpc.monad.xyz"],
     // No Etherscan-family API key coverage yet, so verification/source data is
     // unavailable and the report leans on on-chain reads alone.
+    coverage: "partial",
+  },
+  {
+    id: monadTestnet.id,
+    label: "Monad Testnet",
+    explorerUrl: "https://testnet.monadscan.com",
+    rpcUrls: ["https://testnet-rpc.monad.xyz", "https://rpc.ankr.com/monad_testnet"],
     coverage: "partial",
   },
 ];

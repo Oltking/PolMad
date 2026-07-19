@@ -8,8 +8,10 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { PROPHEY_MARKET, propheyMarketAbi, isDeployed } from "@/lib/contracts";
-import { chainById, monadTestnet } from "@/lib/chains";
+import { propheyMarketAbi } from "@/lib/contracts";
+import { chainById } from "@/lib/chains";
+import { useNetwork } from "@/lib/network-context";
+import { isNetworkLive } from "@/lib/networks";
 import { OddsBar, fmt } from "@/components/OddsBar";
 import { StakeModal } from "@/components/StakeModal";
 import type { CallData } from "@/hooks/useCalls";
@@ -19,37 +21,47 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const callId = BigInt(id);
   const { address } = useAccount();
+  const { network } = useNetwork();
+  const market = network.deployment.propheyMarket;
+  const live = isNetworkLive(network);
   const [staking, setStaking] = useState(false);
 
   const { data: call, refetch } = useReadContract({
-    address: PROPHEY_MARKET,
+    address: market,
     abi: propheyMarketAbi,
     functionName: "getCall",
     args: [callId],
-    query: { enabled: isDeployed(PROPHEY_MARKET), refetchInterval: 8_000 },
+    chainId: network.id,
+    query: { enabled: live, refetchInterval: 8_000 },
   });
 
   const { data: position } = useReadContract({
-    address: PROPHEY_MARKET,
+    address: market,
     abi: propheyMarketAbi,
     functionName: "positionOf",
     args: address ? [callId, address] : undefined,
-    query: { enabled: !!address && isDeployed(PROPHEY_MARKET), refetchInterval: 8_000 },
+    chainId: network.id,
+    query: { enabled: !!address && live, refetchInterval: 8_000 },
   });
 
   const { data: payout } = useReadContract({
-    address: PROPHEY_MARKET,
+    address: market,
     abi: propheyMarketAbi,
     functionName: "payoutOf",
     args: address ? [callId, address] : undefined,
-    query: { enabled: !!address && isDeployed(PROPHEY_MARKET), refetchInterval: 8_000 },
+    chainId: network.id,
+    query: { enabled: !!address && live, refetchInterval: 8_000 },
   });
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract();
   const { isLoading: confirming, isSuccess: claimed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  if (!isDeployed(PROPHEY_MARKET)) {
-    return <p className="text-sm text-[var(--muted)]">Market contract not configured.</p>;
+  if (!live) {
+    return (
+      <p className="text-sm text-[var(--muted)]">
+        No market deployed on {network.label}. Switch networks in the header.
+      </p>
+    );
   }
   if (!call) {
     return <p className="text-sm text-[var(--muted)]">Loading call #{id}…</p>;
@@ -163,7 +175,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
                 <button
                   onClick={() =>
                     writeContract({
-                      address: PROPHEY_MARKET,
+                      address: market,
                       abi: propheyMarketAbi,
                       functionName: "claim",
                       args: [callId],
@@ -179,7 +191,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
 
             {claimed && (
               <a
-                href={`${monadTestnet.blockExplorers.default.url}/tx/${txHash}`}
+                href={`${network.chain.blockExplorers.default.url}/tx/${txHash}`}
                 target="_blank"
                 rel="noreferrer"
                 className="block text-[11px] text-[var(--acid)] break-all hover:underline"
@@ -208,7 +220,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
           <button
             onClick={() =>
               writeContract({
-                address: PROPHEY_MARKET,
+                address: market,
                 abi: propheyMarketAbi,
                 functionName: "voidCall",
                 args: [callId],

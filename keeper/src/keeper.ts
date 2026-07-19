@@ -6,7 +6,7 @@ import {
   type Address,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { monadTestnet, publicClientFor } from "./chains.js";
+import { monadTestnet, monadMainnet, publicClientFor } from "./chains.js";
 import { propheyMarketAbi, erc20Abi } from "./abi.js";
 import {
   detectLiquidityPull,
@@ -42,10 +42,16 @@ function requireEnv(name: string): string {
 
 const marketAddress = getAddress(requireEnv("PROPHEY_MARKET_ADDRESS"));
 const account = privateKeyToAccount(requireEnv("KEEPER_PRIVATE_KEY") as `0x${string}`);
-const monadRpc = process.env.MONAD_RPC_URL ?? monadTestnet.rpcUrls.default.http[0];
+/// Which Monad network this keeper resolves on. Defaults to testnet: a keeper
+/// pointed at mainnet by accident would be resolving calls holding real money.
+const STAKING_CHAIN_ID = Number(process.env.STAKING_CHAIN_ID ?? 10143);
+const stakingChain = STAKING_CHAIN_ID === 143 ? monadMainnet : monadTestnet;
+const monadRpc =
+  (STAKING_CHAIN_ID === 143 ? process.env.MONAD_MAINNET_RPC_URL : process.env.MONAD_RPC_URL) ??
+  stakingChain.rpcUrls.default.http[0];
 
-const monad = createPublicClient({ chain: monadTestnet, transport: http(monadRpc) });
-const wallet = createWalletClient({ account, chain: monadTestnet, transport: http(monadRpc) });
+const monad = createPublicClient({ chain: stakingChain, transport: http(monadRpc) });
+const wallet = createWalletClient({ account, chain: stakingChain, transport: http(monadRpc) });
 
 /// Per-call state we cannot read back from the chain: the supply baseline at the
 /// moment the Call opened. Held in memory and re-derived on restart from the
@@ -60,6 +66,8 @@ const state = new Map<string, CallState>();
 
 async function main() {
   const once = process.argv.includes("--once");
+  console.log(`[keeper] network=${stakingChain.name} (${stakingChain.id})`);
+  if (stakingChain.id === 143) console.warn("[keeper] *** MAINNET — resolutions move real funds ***");
   console.log(`[keeper] resolver=${account.address} market=${marketAddress}`);
   console.log(`[keeper] polling every ${POLL_INTERVAL_MS}ms${once ? " (single pass)" : ""}`);
 

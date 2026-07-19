@@ -1,7 +1,9 @@
 "use client";
 
 import { useReadContract, useReadContracts } from "wagmi";
-import { PROPHEY_MARKET, propheyMarketAbi, isDeployed } from "@/lib/contracts";
+import { propheyMarketAbi } from "@/lib/contracts";
+import { useNetwork } from "@/lib/network-context";
+import { isNetworkLive } from "@/lib/networks";
 
 export interface CallData {
   id: bigint;
@@ -16,32 +18,36 @@ export interface CallData {
   voided: boolean;
 }
 
-/// Reads every Call straight from the contract.
+/// Reads every Call from the market on the *currently selected* network. Every read
+/// pins `chainId` explicitly so a stale wallet connection can never cause testnet
+/// data to render as mainnet data (or the reverse).
 ///
-/// This is a deliberate hackathon-scope choice over an indexer: N+1 eth_calls is
-/// fine at demo volume and has no infrastructure to go stale or lie. It will not
-/// scale past a few hundred Calls — at that point the events are already there to
-/// index (spec §8), and only this hook needs replacing.
+/// N+1 eth_calls is a deliberate hackathon-scope choice over an indexer: fine at
+/// demo volume, no infrastructure to go stale. Replace this hook alone when it isn't.
 export function useCalls() {
-  const deployed = isDeployed(PROPHEY_MARKET);
+  const { network } = useNetwork();
+  const market = network.deployment.propheyMarket;
+  const live = isNetworkLive(network);
 
   const { data: count, isLoading: loadingCount } = useReadContract({
-    address: PROPHEY_MARKET,
+    address: market,
     abi: propheyMarketAbi,
     functionName: "callCount",
-    query: { enabled: deployed, refetchInterval: 10_000 },
+    chainId: network.id,
+    query: { enabled: live, refetchInterval: 10_000 },
   });
 
   const ids = count ? Array.from({ length: Number(count) }, (_, i) => BigInt(i + 1)) : [];
 
   const { data, isLoading } = useReadContracts({
     contracts: ids.map((id) => ({
-      address: PROPHEY_MARKET,
+      address: market,
       abi: propheyMarketAbi,
       functionName: "getCall" as const,
       args: [id] as const,
+      chainId: network.id,
     })),
-    query: { enabled: deployed && ids.length > 0, refetchInterval: 10_000 },
+    query: { enabled: live && ids.length > 0, refetchInterval: 10_000 },
   });
 
   const calls: CallData[] = (data ?? []).flatMap((r, i) => {
@@ -50,15 +56,11 @@ export function useCalls() {
     return [{ ...c, id: ids[i] }];
   });
 
-  return {
-    calls,
-    isLoading: loadingCount || isLoading,
-    deployed,
-  };
+  return { calls, isLoading: loadingCount || isLoading, deployed: live, network };
 }
 
-/// Pool split as a percentage on the RUG side. Returns null for an empty market —
-/// 50/50 would be a fabricated price for a market nobody has traded.
+/// Pool split as a percentage on the RUG side. Null for an empty market — 50/50
+/// would be a fabricated price for a market nobody has traded.
 export function rugOdds(call: Pick<CallData, "totalSafeStake" | "totalRugStake">): number | null {
   const total = call.totalSafeStake + call.totalRugStake;
   if (total === 0n) return null;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import "./globals.css";
 import { Providers } from "./providers";
 import { WalletButton } from "@/components/WalletButton";
+import { NetworkSwitch } from "@/components/NetworkSwitch";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -40,7 +41,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   </Link>
                 ))}
               </nav>
-              <div className="ml-auto shrink-0">
+              <div className="ml-auto shrink-0 flex items-center gap-2">
+                <NetworkSwitch />
                 <WalletButton />
               </div>
             </div>

@@ -1,7 +1,6 @@
 import { createWalletClient, createPublicClient, http, isAddress, getAddress, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { monadTestnet } from "@/lib/chains";
-import { VERIFIER_BADGE, isDeployed } from "@/lib/contracts";
+import { networkFor, isDeployed, DEFAULT_STAKING_CHAIN, type StakingChainId } from "@/lib/networks";
 import { readMarketEvents } from "@/lib/events";
 import { computeCallerStats } from "@/lib/callerScore";
 
@@ -29,8 +28,11 @@ export async function POST(request: Request) {
   if (!wallet || !isAddress(wallet)) {
     return Response.json({ error: "Valid `wallet` required" }, { status: 400 });
   }
-  if (!isDeployed(VERIFIER_BADGE)) {
-    return Response.json({ error: "VerifierBadge not deployed" }, { status: 503 });
+  const chainId = (Number(body?.chainId) || DEFAULT_STAKING_CHAIN) as StakingChainId;
+  const network = networkFor(chainId);
+  const badgeContract = network.deployment.verifierBadge;
+  if (!isDeployed(badgeContract)) {
+    return Response.json({ error: `VerifierBadge not deployed on ${network.label}` }, { status: 503 });
   }
 
   const minterKey = process.env.BADGE_MINTER_PRIVATE_KEY;
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   const address = getAddress(wallet);
-  const events = await readMarketEvents();
+  const events = await readMarketEvents(chainId);
   if (events.degraded) {
     // Never mint off incomplete data — a partial event sweep could award a badge
     // that the full history does not support.
@@ -57,15 +59,15 @@ export async function POST(request: Request) {
   if (stats.contrarianWins >= 1) eligible.push(AGAINST_THE_CROWD);
 
   const account = privateKeyToAccount(minterKey as `0x${string}`);
-  const rpc = process.env.MONAD_RPC_URL ?? monadTestnet.rpcUrls.default.http[0];
-  const publicClient = createPublicClient({ chain: monadTestnet, transport: http(rpc) });
-  const walletClient = createWalletClient({ account, chain: monadTestnet, transport: http(rpc) });
+  const rpc = network.chain.rpcUrls.default.http[0];
+  const publicClient = createPublicClient({ chain: network.chain, transport: http(rpc) });
+  const walletClient = createWalletClient({ account, chain: network.chain, transport: http(rpc) });
 
   const minted: { badgeType: number; txHash: string }[] = [];
 
   for (const badgeType of eligible) {
     const already = await publicClient.readContract({
-      address: VERIFIER_BADGE,
+      address: badgeContract,
       abi: mintAbi,
       functionName: "hasBadge",
       args: [address, BigInt(badgeType)],
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
 
     try {
       const txHash = await walletClient.writeContract({
-        address: VERIFIER_BADGE,
+        address: badgeContract,
         abi: mintAbi,
         functionName: "mintBadge",
         args: [address, BigInt(badgeType)],

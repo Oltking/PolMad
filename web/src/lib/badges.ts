@@ -1,23 +1,26 @@
 import { createPublicClient, http, type Address } from "viem";
-import { monadTestnet } from "./chains";
-import { VERIFIER_BADGE, verifierBadgeAbi, isDeployed } from "./contracts";
-
-const client = createPublicClient({
-  chain: monadTestnet,
-  transport: http(process.env.MONAD_RPC_URL ?? monadTestnet.rpcUrls.default.http[0]),
-});
+import { verifierBadgeAbi } from "./contracts";
+import { networkFor, isDeployed, DEFAULT_STAKING_CHAIN, type StakingChainId } from "./networks";
 
 /// Badge types held by a wallet. Returns an explicit error string rather than an
 /// empty list on failure — "we couldn't check" and "you have none" look identical
 /// to a user otherwise, and only one of them is a reason to retry.
 export async function readBadges(
   wallet: Address,
+  chainId: StakingChainId = DEFAULT_STAKING_CHAIN,
 ): Promise<{ types: number[]; error?: string }> {
-  if (!isDeployed(VERIFIER_BADGE)) return { types: [] };
+  const network = networkFor(chainId);
+  const badgeContract = network.deployment.verifierBadge;
+  if (!isDeployed(badgeContract)) return { types: [] };
+
+  const client = createPublicClient({
+    chain: network.chain,
+    transport: http(network.chain.rpcUrls.default.http[0]),
+  });
 
   try {
     const tokenIds = await client.readContract({
-      address: VERIFIER_BADGE,
+      address: badgeContract,
       abi: verifierBadgeAbi,
       functionName: "badgesOf",
       args: [wallet],
@@ -26,7 +29,7 @@ export async function readBadges(
     const types = await Promise.all(
       (tokenIds as readonly bigint[]).map((id) =>
         client.readContract({
-          address: VERIFIER_BADGE,
+          address: badgeContract,
           abi: verifierBadgeAbi,
           functionName: "badgeTypeOf",
           args: [id],

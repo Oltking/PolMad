@@ -8,7 +8,6 @@ import { OddsBar, fmt } from "@/components/OddsBar";
 import { StakeModal } from "@/components/StakeModal";
 import { CreateCallModal } from "@/components/CreateCallModal";
 import { chainById } from "@/lib/chains";
-import { PROPHEY_MARKET, isDeployed } from "@/lib/contracts";
 
 export default function CallsPage() {
   return (
@@ -20,7 +19,7 @@ export default function CallsPage() {
 
 function CallsInner() {
   const params = useSearchParams();
-  const { calls, isLoading, deployed } = useCalls();
+  const { calls, isLoading, deployed, network } = useCalls();
   const [staking, setStaking] = useState<CallData | null>(null);
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState<"open" | "settled" | "all">("open");
@@ -40,10 +39,11 @@ function CallsInner() {
   if (!deployed) {
     return (
       <div className="panel p-6 space-y-2">
-        <h1 className="text-lg font-bold">Market not deployed yet</h1>
+        <h1 className="text-lg font-bold">Not deployed on {network.label}</h1>
         <p className="text-sm text-[var(--muted)]">
-          <code>NEXT_PUBLIC_PROPHEY_MARKET</code> is unset, so there is no contract to read. Deploy
-          the contracts and set it in <code>web/.env.local</code>.
+          There is no PropheyMarket contract on {network.label} yet
+          {network.isTestnet ? "" : " — mainnet has not been launched"}. Switch networks in the
+          header, or deploy and set the address in <code>web/.env.local</code>.
         </p>
         <p className="text-[11px] text-[var(--muted)]">
           The Check page works without this — reports never require a deployed market.

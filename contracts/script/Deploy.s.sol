@@ -19,8 +19,20 @@ import {MockRugToken} from "../src/MockRugToken.sol";
 ///   BADGE_URI  — base URI for badge metadata
 ///   DEPLOY_MOCK — "true" to also deploy the demo rug token
 contract Deploy is Script {
+    /// Foundry's default sender. If `--sender` is omitted, `msg.sender` inside a
+    /// script silently becomes this address even though a keystore account signs and
+    /// pays — which bakes an address nobody controls into every constructor.
+    /// Deployments that hit this look completely successful and are entirely useless,
+    /// so we refuse to broadcast rather than let it through.
+    address constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
+
     function run() external {
         address deployer = msg.sender;
+        require(
+            deployer != FOUNDRY_DEFAULT_SENDER,
+            "Refusing to deploy: msg.sender is Foundry's default sender. Pass --sender <your address> so ownership is assigned to a key you control."
+        );
+
         address resolver = vm.envOr("RESOLVER", deployer);
         address minter = vm.envOr("MINTER", deployer);
         string memory badgeURI = vm.envOr("BADGE_URI", string("https://polymad.local/api/badge/"));

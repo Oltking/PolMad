@@ -1,6 +1,5 @@
 import { createPublicClient, http, parseAbiItem } from "viem";
-import { monadTestnet } from "./chains";
-import { PROPHEY_MARKET, isDeployed } from "./contracts";
+import { networkFor, isNetworkLive, DEFAULT_STAKING_CHAIN, type StakingChainId } from "./networks";
 import type { StakeEvent, ResolvedCall } from "./callerScore";
 
 /// Server-side event reader powering the leaderboard, feed, and profile pages.
@@ -20,13 +19,10 @@ const createdEvent = parseAbiItem(
   "event CallCreated(uint256 indexed callId, uint256 indexed chainId, address indexed target, address creator, uint256 windowEnd)",
 );
 
-const client = createPublicClient({
-  chain: monadTestnet,
-  transport: http(process.env.MONAD_RPC_URL ?? monadTestnet.rpcUrls.default.http[0]),
-});
-
 const CACHE_MS = 20_000;
-let cache: { at: number; data: MarketEvents } | null = null;
+/// Cached per chain — mainnet and testnet must never share an entry, or a user on
+/// one network would be shown the other network's activity.
+const cache = new Map<number, { at: number; data: MarketEvents }>();
 
 export interface MarketEvents {
   stakes: StakeEvent[];
@@ -44,17 +40,27 @@ export interface MarketEvents {
   degraded: boolean;
 }
 
-export async function readMarketEvents(): Promise<MarketEvents> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.data;
+export async function readMarketEvents(
+  chainId: StakingChainId = DEFAULT_STAKING_CHAIN,
+): Promise<MarketEvents> {
+  const hit = cache.get(chainId);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
 
+  const network = networkFor(chainId);
   const empty: MarketEvents = { stakes: [], resolved: [], created: [], degraded: true };
-  if (!isDeployed(PROPHEY_MARKET)) return { ...empty, degraded: false };
+  if (!isNetworkLive(network)) return { ...empty, degraded: false };
+
+  const market = network.deployment.propheyMarket;
+  const client = createPublicClient({
+    chain: network.chain,
+    transport: http(network.chain.rpcUrls.default.http[0]),
+  });
 
   try {
     const [staked, resolved, created] = await Promise.all([
-      client.getLogs({ address: PROPHEY_MARKET, event: stakedEvent, fromBlock: "earliest" }),
-      client.getLogs({ address: PROPHEY_MARKET, event: resolvedEvent, fromBlock: "earliest" }),
-      client.getLogs({ address: PROPHEY_MARKET, event: createdEvent, fromBlock: "earliest" }),
+      client.getLogs({ address: market, event: stakedEvent, fromBlock: "earliest" }),
+      client.getLogs({ address: market, event: resolvedEvent, fromBlock: "earliest" }),
+      client.getLogs({ address: market, event: createdEvent, fromBlock: "earliest" }),
     ]);
 
     const data: MarketEvents = {
@@ -81,7 +87,7 @@ export async function readMarketEvents(): Promise<MarketEvents> {
       degraded: false,
     };
 
-    cache = { at: Date.now(), data };
+    cache.set(chainId, { at: Date.now(), data });
     return data;
   } catch (err) {
     console.warn("[events] log sweep failed:", (err as Error).message);

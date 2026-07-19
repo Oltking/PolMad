@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Off-chain resolver for Polymad Prophecy Calls",
   "scripts": {
-    "start": "tsx src/keeper.ts",
-    "once": "tsx src/keeper.ts --once",
+    "start": "tsx --env-file-if-exists=.env src/keeper.ts",
+    "once": "tsx --env-file-if-exists=.env src/keeper.ts --once",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

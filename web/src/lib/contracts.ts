@@ -1,17 +1,9 @@
-import { parseAbi, type Address } from "viem";
+import { parseAbi } from "viem";
 
-/// Deployed addresses come from env so a redeploy never requires a code change.
-/// Zero address means "not deployed yet" — the UI checks this and disables the
-/// staking surface rather than sending transactions into the void.
-export const PROPHEY_MARKET = (process.env.NEXT_PUBLIC_PROPHEY_MARKET ??
-  "0x0000000000000000000000000000000000000000") as Address;
-export const TRUST_REGISTRY = (process.env.NEXT_PUBLIC_TRUST_REGISTRY ??
-  "0x0000000000000000000000000000000000000000") as Address;
-export const VERIFIER_BADGE = (process.env.NEXT_PUBLIC_VERIFIER_BADGE ??
-  "0x0000000000000000000000000000000000000000") as Address;
-
-export const ZERO = "0x0000000000000000000000000000000000000000";
-export const isDeployed = (a: Address) => a.toLowerCase() !== ZERO;
+/// ABIs are network-independent. Addresses are NOT — they come from
+/// `networks.ts` via the user's selected network, never from a module constant,
+/// so a testnet address can never be used on mainnet.
+export { isDeployed } from "./networks";
 
 export const propheyMarketAbi = parseAbi([
   "function callCount() view returns (uint256)",

@@ -1,6 +1,7 @@
 import { createPublicClient, http, isAddress, getAddress, parseAbi, type Address } from "viem";
 import { chainById } from "./chains";
 import type { RawEvidence } from "./types";
+import { fetchMarketData } from "./marketData";
 
 /// Gathers the on-chain and explorer facts a Trust Report is built from.
 ///
@@ -114,7 +115,10 @@ export async function gatherEvidence(chainId: number, rawAddress: string): Promi
   if (owner === null) gaps.push("No `owner()` function — ownership model could not be determined from on-chain reads.");
   if (totalSupply === null) gaps.push("No `totalSupply()` — target may not be an ERC-20.");
 
-  const source = chain.explorerApi ? await fetchSource(chain.explorerApi, chainId, address) : null;
+  const [source, market] = await Promise.all([
+    chain.explorerApi ? fetchSource(chain.explorerApi, chainId, address) : Promise.resolve(null),
+    fetchMarketData(chainId, address),
+  ]);
   if (!chain.explorerApi) {
     gaps.push(`No explorer API configured for ${chain.label}; verification status and source-level checks unavailable.`);
   } else if (!source) {
@@ -133,16 +137,30 @@ export async function gatherEvidence(chainId: number, rawAddress: string): Promi
     totalSupply: totalSupply !== null ? (totalSupply as bigint).toString() : undefined,
     decimals: decimals !== null ? Number(decimals) : undefined,
     symbol: symbol !== null ? (symbol as string) : undefined,
-    // Holder distribution and LP discovery need an indexer or a paid explorer tier.
-    // Rather than fake it, we declare the gap and let the sub-score report as
-    // unavailable — the market layer is what covers what the report can't see.
+    // Holder distribution still needs an indexer or a paid explorer tier.
     topHolders: undefined,
-    liquidityPools: undefined,
+    // Pools now come from a real source rather than being guessed.
+    liquidityPools: market.pools.map((p) => ({ address: p.address, label: p.name })),
+    market: {
+      listed: market.listed,
+      unavailableReason: market.unavailableReason,
+      priceUsd: market.priceUsd,
+      fdvUsd: market.fdvUsd,
+      volume24hUsd: market.volume24hUsd,
+      totalLiquidityUsd: market.totalLiquidityUsd,
+      topPoolShare: market.topPoolShare,
+      pools: market.pools.map((p) => ({
+        address: p.address,
+        name: p.name,
+        reserveUsd: p.reserveUsd,
+        createdAt: p.createdAt,
+      })),
+    },
     deployer: source?.deployer ?? null,
     gaps: [
       ...gaps,
       "Holder concentration not available: requires an indexer or paid explorer tier.",
-      "Liquidity pool discovery not available: requires DEX subgraph access.",
+      ...(market.unavailableReason ? [market.unavailableReason] : []),
     ],
   };
 }

@@ -39,6 +39,17 @@ export interface RawEvidence {
   deployer?: string | null;
   deployedAt?: string | null;
   isContract: boolean;
+  /// Liquidity + market context from GeckoTerminal. Null when unsupported/unlisted.
+  market?: {
+    listed: boolean;
+    unavailableReason?: string;
+    priceUsd?: number | null;
+    fdvUsd?: number | null;
+    volume24hUsd?: number | null;
+    totalLiquidityUsd?: number | null;
+    topPoolShare?: number | null;
+    pools: { address: string; name: string; reserveUsd: number | null; createdAt?: string }[];
+  };
   /// Anything we tried to fetch and couldn't. Surfaced to the user verbatim.
   gaps: string[];
 }

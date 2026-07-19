@@ -78,15 +78,64 @@ export function computeSubScores(e: RawEvidence): SubScore[] {
     verification.findings.push("Source is NOT verified — the deployed bytecode cannot be reviewed.");
   }
 
-  // We have no data source for these two yet, and an invented number here would be
-  // the single most misleading thing this product could do.
-  const liquidity: SubScore = {
-    key: "liquidity",
-    label: LABELS.liquidity,
-    score: null,
-    findings: [],
-    unavailableReason: "Liquidity pool data requires DEX subgraph access, not yet wired up.",
-  };
+  // Liquidity, now measured from real pool data.
+  //
+  // Two distinct risks are scored here, and they are not the same thing:
+  //   depth        — thin liquidity means the price can be moved by anyone
+  //   concentration— one pool holding everything can be pulled in one transaction
+  //
+  // An unlisted token scores `null`, never 0. A token nobody has pooled is the
+  // most dangerous case there is, and must not read as "no liquidity risk".
+  const liquidity: SubScore = { key: "liquidity", label: LABELS.liquidity, score: null, findings: [] };
+  const m = e.market;
+
+  if (!m || !m.listed) {
+    liquidity.unavailableReason =
+      m?.unavailableReason ??
+      "No liquidity data available. This is expected for new tokens and means liquidity is UNVERIFIED, not absent.";
+  } else {
+    const liq = m.totalLiquidityUsd ?? 0;
+    let score: number;
+    if (liq >= 1_000_000) score = 5;
+    else if (liq >= 250_000) score = 15;
+    else if (liq >= 50_000) score = 35;
+    else if (liq >= 10_000) score = 60;
+    else if (liq > 0) score = 80;
+    else score = 90;
+
+    liquidity.findings.push(
+      liq > 0
+        ? `$${Math.round(liq).toLocaleString()} total liquidity across ${m.pools.length} pool(s).`
+        : "Listed, but no measurable liquidity in any pool.",
+    );
+
+    // A single pool holding nearly everything is the classic pull setup.
+    if (m.topPoolShare !== null && m.topPoolShare !== undefined && m.pools.length > 0) {
+      const pct = Math.round(m.topPoolShare * 100);
+      if (m.topPoolShare >= 0.9 && m.pools.length > 1) {
+        score += 15;
+        liquidity.findings.push(`${pct}% of liquidity sits in one pool — a single withdrawal could drain the market.`);
+      } else if (m.pools.length === 1) {
+        score += 20;
+        liquidity.findings.push("Only one pool exists — there is no fallback market if it is pulled.");
+      } else {
+        liquidity.findings.push(`Largest pool holds ${pct}% of liquidity.`);
+      }
+    }
+
+    if (m.volume24hUsd !== null && m.volume24hUsd !== undefined && liq > 0) {
+      const turnover = m.volume24hUsd / liq;
+      // Volume far above the liquidity backing it is a wash-trading signature.
+      if (turnover > 10) {
+        score += 10;
+        liquidity.findings.push(
+          `24h volume is ${turnover.toFixed(1)}x total liquidity — unusually high turnover for this depth.`,
+        );
+      }
+    }
+
+    liquidity.score = Math.min(100, score);
+  }
   const holders: SubScore = {
     key: "holderConcentration",
     label: LABELS.holderConcentration,

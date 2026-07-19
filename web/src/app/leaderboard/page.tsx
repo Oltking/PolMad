@@ -18,6 +18,13 @@ export default async function LeaderboardPage() {
         </p>
       </div>
 
+      {events.indexing && (
+        <div className="panel p-4 text-[11px] text-[var(--warn)]">
+          Building event history — {events.progressPct}% indexed. Scores appear as calls are
+          processed. This runs once; reload in a few seconds.
+        </div>
+      )}
+
       {events.degraded && (
         <div className="panel p-4 text-[11px] text-[var(--warn)]">
           Could not read market events from the RPC — this list may be incomplete. This is a load
@@ -25,7 +32,7 @@ export default async function LeaderboardPage() {
         </div>
       )}
 
-      {!events.degraded && stats.length === 0 && (
+      {!events.degraded && !events.indexing && stats.length === 0 && (
         <div className="panel p-8 text-center text-sm text-[var(--muted)]">
           No resolved calls yet. Scores appear once calls settle.
         </div>

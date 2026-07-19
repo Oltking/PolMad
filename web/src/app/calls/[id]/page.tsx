@@ -13,6 +13,7 @@ import { chainById } from "@/lib/chains";
 import { useNetwork } from "@/lib/network-context";
 import { isNetworkLive } from "@/lib/networks";
 import { OddsBar, fmt } from "@/components/OddsBar";
+import { OddsChart, type StakePoint } from "@/components/OddsChart";
 import { StakeModal } from "@/components/StakeModal";
 import type { CallData } from "@/hooks/useCalls";
 
@@ -27,6 +28,7 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   const [staking, setStaking] = useState(false);
   const [badges, setBadges] = useState<{ badgeType: number; txHash: string }[]>([]);
   const [badgeChecked, setBadgeChecked] = useState(false);
+  const [history, setHistory] = useState<StakePoint[]>([]);
 
   const { data: call, refetch } = useReadContract({
     address: market,
@@ -57,6 +59,35 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract();
   const { isLoading: confirming, isSuccess: claimed } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // Odds history for the chart. Refreshed on the same cadence as the call itself.
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      fetch(`/api/call-history?chainId=${network.id}&callId=${callId}`)
+        .then((r) => r.json())
+        .then((j) => {
+          if (cancelled) return;
+          setHistory(
+            (j.points ?? []).map((p: Record<string, string | boolean>) => ({
+              blockNumber: BigInt(p.blockNumber as string),
+              totalSafeStake: BigInt(p.totalSafeStake as string),
+              totalRugStake: BigInt(p.totalRugStake as string),
+              amount: BigInt(p.amount as string),
+              betRug: p.betRug as boolean,
+            })),
+          );
+        })
+        .catch(() => {
+          /* chart is supplementary — the live odds bar is the source of truth */
+        });
+    load();
+    const t = setInterval(load, 20_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [network.id, callId]);
 
   /// Milestones are evaluated after a claim, because claiming is the moment a
   /// correct call becomes final. Eligibility is recomputed server-side from
@@ -129,6 +160,8 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
         </div>
 
         <OddsBar safeStake={c.totalSafeStake} rugStake={c.totalRugStake} />
+
+        <OddsChart points={history} />
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[10px]">
           <Stat label="POOL" value={`${fmt(c.totalSafeStake + c.totalRugStake)} MON`} />

@@ -1,6 +1,6 @@
 import { createPublicClient, http, parseAbiItem } from "viem";
 import { networkFor, isNetworkLive, DEFAULT_STAKING_CHAIN, type StakingChainId } from "./networks";
-import { chunkedGetLogs } from "./logs";
+import { getIndex } from "./indexer";
 import type { StakeEvent, ResolvedCall } from "./callerScore";
 
 /// Server-side event reader powering the leaderboard, feed, and profile pages.
@@ -39,70 +39,42 @@ export interface MarketEvents {
   /// True when the sweep failed — the UI says "couldn't load" rather than
   /// rendering an empty leaderboard that looks like "nobody has played".
   degraded: boolean;
+  /// True while the index is still catching up to chain head.
+  indexing?: boolean;
+  progressPct?: number;
 }
 
 export async function readMarketEvents(
   chainId: StakingChainId = DEFAULT_STAKING_CHAIN,
 ): Promise<MarketEvents> {
-  const hit = cache.get(chainId);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
-
   const network = networkFor(chainId);
-  const empty: MarketEvents = { stakes: [], resolved: [], created: [], degraded: true };
-  if (!isNetworkLive(network)) return { ...empty, degraded: false };
-
-  const market = network.deployment.propheyMarket;
-  const client = createPublicClient({
-    chain: network.chain,
-    transport: http(network.chain.rpcUrls.default.http[0]),
-  });
-
-  try {
-    // Monad's RPC rejects fromBlock:"earliest" and caps range width, so history
-    // is read in chunks from the deployment block.
-    const head = await client.getBlockNumber();
-    const since = network.deployment.deployedAtBlock ?? (head > 50_000n ? head - 50_000n : 0n);
-    // Bounded: a leaderboard that takes two minutes is a broken leaderboard. If the
-    // cap truncates history, `complete` reports it rather than pretending.
-    const maxChunks = 120;
-
-    const [stakedR, resolvedR, createdR] = await Promise.all([
-      chunkedGetLogs(client as never, { address: market, event: stakedEvent, fromBlock: since, toBlock: head, maxChunks }),
-      chunkedGetLogs(client as never, { address: market, event: resolvedEvent, fromBlock: since, toBlock: head, maxChunks }),
-      chunkedGetLogs(client as never, { address: market, event: createdEvent, fromBlock: since, toBlock: head, maxChunks }),
-    ]);
-    const staked = stakedR.logs;
-    const resolved = resolvedR.logs;
-    const created = createdR.logs;
-
-    const data: MarketEvents = {
-      stakes: staked.map((l) => ({
-        callId: l.args.callId!,
-        wallet: l.args.wallet!,
-        betRug: l.args.betRug!,
-        amount: l.args.amount!,
-        totalSafeStake: l.args.totalSafeStake!,
-        totalRugStake: l.args.totalRugStake!,
-      })),
-      resolved: resolved.map((l) => ({
-        callId: l.args.callId!,
-        outcomeIsRug: l.args.outcomeIsRug!,
-      })),
-      created: created.map((l) => ({
-        callId: l.args.callId!,
-        chainId: l.args.chainId!,
-        target: l.args.target!,
-        creator: l.args.creator!,
-        windowEnd: l.args.windowEnd!,
-        blockNumber: l.blockNumber,
-      })),
-      degraded: false,
-    };
-
-    cache.set(chainId, { at: Date.now(), data });
-    return data;
-  } catch (err) {
-    console.warn("[events] log sweep failed:", (err as Error).message);
-    return empty;
+  if (!isNetworkLive(network)) {
+    return { stakes: [], resolved: [], created: [], degraded: false };
   }
+
+  // Reads come from the incremental index, never a live sweep. Scanning per
+  // request is what left this permanently empty: the deadline always expired
+  // before the scan reached the blocks that mattered.
+  const idx = await getIndex(chainId);
+
+  return {
+    stakes: idx.stakes.map((s) => ({
+      callId: BigInt(s.callId),
+      wallet: s.wallet,
+      betRug: s.betRug,
+      amount: BigInt(s.amount),
+      totalSafeStake: BigInt(s.totalSafeStake),
+      totalRugStake: BigInt(s.totalRugStake),
+    })),
+    resolved: idx.resolutions.map((r) => ({
+      callId: BigInt(r.callId),
+      outcomeIsRug: r.outcomeIsRug,
+    })),
+    created: [],
+    // Not an error — history is still being built. The UI distinguishes
+    // "still indexing" from "nothing has happened".
+    degraded: false,
+    indexing: !idx.synced,
+    progressPct: idx.progressPct,
+  };
 }

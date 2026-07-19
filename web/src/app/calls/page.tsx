@@ -4,6 +4,8 @@ import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCalls, type CallData } from "@/hooks/useCalls";
+import { useAccount, useReadContracts } from "wagmi";
+import { propheyMarketAbi } from "@/lib/contracts";
 import { OddsBar, fmt } from "@/components/OddsBar";
 import { StakeModal } from "@/components/StakeModal";
 import { CreateCallModal } from "@/components/CreateCallModal";
@@ -22,19 +24,48 @@ function CallsInner() {
   const { calls, isLoading, deployed, network } = useCalls();
   const [staking, setStaking] = useState<CallData | null>(null);
   const [creating, setCreating] = useState(false);
-  const [filter, setFilter] = useState<"open" | "settled" | "all">("open");
+  const [filter, setFilter] = useState<"open" | "settled" | "all" | "mine">("open");
+  const { address } = useAccount();
 
   // Arriving from a Trust Report with a target prefilled.
   const prefillTarget = params.get("target") ?? undefined;
   const prefillChain = params.get("chainId") ? Number(params.get("chainId")) : undefined;
 
+  // Positions for the connected wallet, so "My Calls" does not require the user
+  // to remember call ids. One multicall rather than N requests.
+  const { data: positions } = useReadContracts({
+    contracts: calls.map((c) => ({
+      address: network.deployment.propheyMarket,
+      abi: propheyMarketAbi,
+      functionName: "positionOf" as const,
+      args: [c.id, address ?? "0x0000000000000000000000000000000000000000"] as const,
+      chainId: network.id,
+    })),
+    query: { enabled: !!address && calls.length > 0, refetchInterval: 15_000 },
+  });
+
+  const myCallIds = new Set(
+    (positions ?? []).flatMap((r, i) => {
+      if (r.status !== "success") return [];
+      const [onSafe, onRug] = r.result as unknown as [bigint, bigint, boolean];
+      return onSafe > 0n || onRug > 0n ? [calls[i].id.toString()] : [];
+    }),
+  );
+
   const now = BigInt(Math.floor(Date.now() / 1000));
   const shown = calls.filter((c) => {
     const settled = c.resolved || c.voided;
+    if (filter === "mine") return myCallIds.has(c.id.toString());
     if (filter === "open") return !settled;
     if (filter === "settled") return settled;
     return true;
   });
+
+  // Claimable positions deserve to be impossible to miss — this is money the user
+  // has already won and has not collected.
+  const claimable = calls.filter(
+    (c) => (c.resolved || c.voided) && myCallIds.has(c.id.toString()),
+  );
 
   if (!deployed) {
     return (
@@ -70,7 +101,7 @@ function CallsInner() {
       </div>
 
       <div className="flex gap-2 text-[11px]">
-        {(["open", "settled", "all"] as const).map((f) => (
+        {(["open", "settled", "all", ...(address ? (["mine"] as const) : [])] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -80,10 +111,22 @@ function CallsInner() {
               color: filter === f ? "var(--acid)" : "var(--muted)",
             }}
           >
-            {f}
+            {f === "mine" ? `MINE (${myCallIds.size})` : f}
           </button>
         ))}
       </div>
+
+      {claimable.length > 0 && filter !== "mine" && (
+        <button
+          onClick={() => setFilter("mine")}
+          className="w-full panel p-3 text-left text-[11px] border-[var(--acid)] hover:brightness-125"
+        >
+          <span className="text-[var(--acid)] font-bold">
+            You have {claimable.length} settled call{claimable.length === 1 ? "" : "s"}
+          </span>
+          <span className="text-[var(--muted)]"> — check whether there is a payout to claim →</span>
+        </button>
+      )}
 
       {isLoading && <div className="panel p-8 text-center text-sm text-[var(--muted)]">Reading calls…</div>}
 

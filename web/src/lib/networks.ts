@@ -29,6 +29,9 @@ export interface Deployment {
   /// Demo-only rug token. Testnet only — deploying this to mainnet would be
   /// publishing a working scam contract, so it stays undefined there.
   mockRugToken?: Address;
+  /// Block the contracts were deployed at. History scans start here — scanning
+  /// from genesis is both impossible (RPC limits) and pointless.
+  deployedAtBlock?: bigint;
 }
 
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
@@ -41,6 +44,9 @@ const TESTNET_DEPLOYMENT: Deployment = {
   verifierBadge: (process.env.NEXT_PUBLIC_VERIFIER_BADGE ?? ZERO) as Address,
   tokenFactory: (process.env.NEXT_PUBLIC_TOKEN_FACTORY ?? ZERO) as Address,
   mockRugToken: process.env.NEXT_PUBLIC_MOCK_RUG_TOKEN as Address | undefined,
+  deployedAtBlock: process.env.NEXT_PUBLIC_DEPLOY_BLOCK
+    ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK)
+    : undefined,
 };
 
 const MAINNET_DEPLOYMENT: Deployment = {
@@ -48,6 +54,9 @@ const MAINNET_DEPLOYMENT: Deployment = {
   trustRegistry: (process.env.NEXT_PUBLIC_TRUST_REGISTRY_MAINNET ?? ZERO) as Address,
   verifierBadge: (process.env.NEXT_PUBLIC_VERIFIER_BADGE_MAINNET ?? ZERO) as Address,
   tokenFactory: (process.env.NEXT_PUBLIC_TOKEN_FACTORY_MAINNET ?? ZERO) as Address,
+  deployedAtBlock: process.env.NEXT_PUBLIC_DEPLOY_BLOCK_MAINNET
+    ? BigInt(process.env.NEXT_PUBLIC_DEPLOY_BLOCK_MAINNET)
+    : undefined,
 };
 
 export interface StakingNetwork {

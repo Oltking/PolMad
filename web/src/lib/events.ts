@@ -1,5 +1,6 @@
 import { createPublicClient, http, parseAbiItem } from "viem";
 import { networkFor, isNetworkLive, DEFAULT_STAKING_CHAIN, type StakingChainId } from "./networks";
+import { chunkedGetLogs } from "./logs";
 import type { StakeEvent, ResolvedCall } from "./callerScore";
 
 /// Server-side event reader powering the leaderboard, feed, and profile pages.
@@ -57,11 +58,22 @@ export async function readMarketEvents(
   });
 
   try {
-    const [staked, resolved, created] = await Promise.all([
-      client.getLogs({ address: market, event: stakedEvent, fromBlock: "earliest" }),
-      client.getLogs({ address: market, event: resolvedEvent, fromBlock: "earliest" }),
-      client.getLogs({ address: market, event: createdEvent, fromBlock: "earliest" }),
+    // Monad's RPC rejects fromBlock:"earliest" and caps range width, so history
+    // is read in chunks from the deployment block.
+    const head = await client.getBlockNumber();
+    const since = network.deployment.deployedAtBlock ?? (head > 50_000n ? head - 50_000n : 0n);
+    // Bounded: a leaderboard that takes two minutes is a broken leaderboard. If the
+    // cap truncates history, `complete` reports it rather than pretending.
+    const maxChunks = 120;
+
+    const [stakedR, resolvedR, createdR] = await Promise.all([
+      chunkedGetLogs(client as never, { address: market, event: stakedEvent, fromBlock: since, toBlock: head, maxChunks }),
+      chunkedGetLogs(client as never, { address: market, event: resolvedEvent, fromBlock: since, toBlock: head, maxChunks }),
+      chunkedGetLogs(client as never, { address: market, event: createdEvent, fromBlock: since, toBlock: head, maxChunks }),
     ]);
+    const staked = stakedR.logs;
+    const resolved = resolvedR.logs;
+    const created = createdR.logs;
 
     const data: MarketEvents = {
       stakes: staked.map((l) => ({

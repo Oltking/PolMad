@@ -20,12 +20,39 @@ export function TrustReportCard({ report, reportHash }: { report: TrustReport; r
       {/* Headline: score + verdict. The score is deliberately shown as "risk", not
           a grade — a high number is bad, which is the direction people scan for. */}
       <div className="flex flex-wrap items-start gap-6 p-5 border-b border-[var(--line)]">
-        <div className="shrink-0">
+        {/* Score direction must be unmissable. A bare "10" reads like a grade out
+            of 100 — i.e. terrible — when it actually means very low risk. The scale
+            below spells out which end is which, every time. */}
+        <div className="shrink-0 w-36">
           <div className="text-[10px] text-[var(--muted)] tracking-widest">RISK SCORE</div>
-          <div className="text-5xl font-bold leading-none mt-1" style={{ color: verdict.color }}>
-            {scored ? report.riskScore : "—"}
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-5xl font-bold leading-none" style={{ color: verdict.color }}>
+              {scored ? report.riskScore : "—"}
+            </span>
+            <span className="text-sm text-[var(--muted)]">/100</span>
           </div>
-          <div className="text-[10px] text-[var(--muted)] mt-1">{scored ? "of 100" : "not scorable"}</div>
+
+          {scored && (
+            <>
+              <div className="mt-2 h-1.5 bg-[var(--surface-2)] relative">
+                <div
+                  className="absolute top-0 bottom-0 w-1 bg-[var(--fg)]"
+                  style={{ left: `calc(${report.riskScore}% - 2px)` }}
+                  aria-hidden
+                />
+                <div className="h-full flex">
+                  <div className="flex-[40] bg-[var(--safe)] opacity-30" />
+                  <div className="flex-[30] bg-[var(--warn)] opacity-30" />
+                  <div className="flex-[30] bg-[var(--rug)] opacity-30" />
+                </div>
+              </div>
+              <div className="flex justify-between text-[9px] text-[var(--muted)] mt-1">
+                <span>0 safer</span>
+                <span>riskier 100</span>
+              </div>
+            </>
+          )}
+          {!scored && <div className="text-[10px] text-[var(--muted)] mt-1">not scorable</div>}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -35,6 +62,13 @@ export function TrustReportCard({ report, reportHash }: { report: TrustReport; r
           >
             {verdict.label}
           </div>
+          <p className="mt-2 text-[11px] text-[var(--muted)]">
+            {report.riskScore < 40
+              ? "Lower is safer — this contract shows few owner-controlled powers."
+              : report.riskScore < 70
+                ? "Lower is safer — this contract has some owner-controlled powers."
+                : "Lower is safer — this contract gives its owner substantial power over holders."}
+          </p>
           <p className="mt-3 text-sm leading-relaxed text-[var(--fg)]">{report.summary}</p>
           <div className="mt-3 text-[11px] text-[var(--muted)] break-all">
             {chain?.label} · <span className="text-[var(--fg)]">{report.address}</span>

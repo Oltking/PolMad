@@ -50,14 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <header className="border-b border-[var(--line)] sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur">
             <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-6">
               <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="PolMad home">
-                <Image
-                  src="/logo.png"
-                  alt=""
-                  width={26}
-                  height={26}
-                  priority
-                  className="border border-[var(--line)]"
-                />
+                <Image src="/logo-trimmed.png" alt="" width={28} height={28} priority />
                 <span className="font-bold tracking-tight text-[var(--acid)] hidden sm:inline">
                   POLMAD
                 </span>

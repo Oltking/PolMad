@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { isAddress } from "viem";
 import { SUPPORTED_CHAINS } from "@/lib/chains";
 import { TrustReportCard } from "@/components/TrustReportCard";
 import type { TrustReport } from "@/lib/types";
+import { CheckHistory } from "@/components/CheckHistory";
+import { saveCheck, getCheck, type CheckHistoryEntry } from "@/lib/checkHistory";
 
 /// Loop 1 — Check. Free, chain-agnostic, no wallet. This page must never require
 /// a connection: it is the entire top of the funnel (spec §3.3).
@@ -17,6 +19,25 @@ export default function CheckPage() {
   const [reportHash, setReportHash] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
+  const [fromCache, setFromCache] = useState(false);
+
+  // Deep links from the feed, launches list, and launch success screen.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const a = params.get("address");
+    const c = Number(params.get("chainId"));
+    if (a) {
+      setAddress(a);
+      if (SUPPORTED_CHAINS.some((s2) => s2.id === c)) setChainId(c);
+      const stored = getCheck(c, a);
+      if (stored) {
+        setReport(stored.report);
+        setReportHash(stored.reportHash);
+        setFromCache(true);
+      }
+    }
+  }, []);
 
   const valid = isAddress(address.trim());
 
@@ -36,6 +57,43 @@ export default function CheckPage() {
       if (!res.ok) throw new Error(json.error ?? "Report failed");
       setReport(json.report);
       setReportHash(json.reportHash);
+      setFromCache(false);
+      saveCheck(json.report, json.reportHash);
+      setHistoryKey((k) => k + 1);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// Opening a stored check is instant: the full report was saved, so there is no
+  /// RPC round trip and no model call. Re-checking is always one click away.
+  function openStored(entry: CheckHistoryEntry) {
+    setAddress(entry.address);
+    setChainId(entry.chainId);
+    setReport(entry.report);
+    setReportHash(entry.reportHash);
+    setFromCache(true);
+    setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function recheck() {
+    if (!report) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/report?chainId=${report.chainId}&address=${report.address}&refresh=1`,
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Report failed");
+      setReport(json.report);
+      setReportHash(json.reportHash);
+      setFromCache(false);
+      saveCheck(json.report, json.reportHash);
+      setHistoryKey((k) => k + 1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -111,6 +169,21 @@ export default function CheckPage() {
 
       {report && (
         <div className="space-y-4">
+          {fromCache && (
+            <div className="panel p-3 flex flex-wrap items-center gap-3 text-[11px]">
+              <span className="text-[var(--muted)] flex-1">
+                Showing a saved report from {new Date(report.generatedAt).toLocaleString()}. On-chain
+                state may have changed since.
+              </span>
+              <button
+                onClick={recheck}
+                disabled={loading}
+                className="px-3 py-1 border border-[var(--acid)] text-[var(--acid)] hover:bg-[var(--acid)] hover:text-black disabled:opacity-40"
+              >
+                {loading ? "RE-CHECKING…" : "RE-CHECK NOW"}
+              </button>
+            </div>
+          )}
           <TrustReportCard report={report} reportHash={reportHash} />
 
           <div className="panel p-4 flex flex-wrap items-center gap-4">
@@ -126,6 +199,8 @@ export default function CheckPage() {
           </div>
         </div>
       )}
+
+      <CheckHistory onOpen={openStored} refreshKey={historyKey} />
     </div>
   );
 }

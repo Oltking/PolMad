@@ -9,7 +9,7 @@ automatically from on-chain conditions, not human judgment.
 The report gives you a first opinion. The market gives you a second one that is
 much harder to fake, because faking it costs money and losing bets in public.
 
-**Live:** _<add your deployed URL>_
+**Live:** https://polmad.vercel.app
 **Contracts:** all verified on Monad testnet (addresses below)
 
 ---

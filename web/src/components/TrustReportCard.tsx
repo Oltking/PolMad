@@ -39,7 +39,7 @@ export function TrustReportCard({
     <section className="panel">
       {/* Headline: score + verdict. The score is deliberately shown as "risk", not
           a grade — a high number is bad, which is the direction people scan for. */}
-      <div className="flex flex-wrap items-start gap-6 p-5 border-b border-[var(--line)]">
+      <div className="flex flex-wrap items-start gap-4 sm:gap-6 p-4 sm:p-5 border-b border-[var(--line)]">
         {/* Score direction must be unmissable. A bare "10" reads like a grade out
             of 100 — i.e. terrible — when it actually means very low risk. The scale
             below spells out which end is which, every time. */}
@@ -99,7 +99,7 @@ export function TrustReportCard({
       <div className="divide-y divide-[var(--line)]">
         {report.subScores.map((s) => (
           <div key={s.key} className="px-5 py-3 flex flex-wrap gap-x-4 gap-y-2 items-baseline">
-            <div className="w-52 shrink-0 text-xs text-[var(--muted)]">{s.label}</div>
+            <div className="w-full sm:w-52 sm:shrink-0 text-xs text-[var(--muted)]">{s.label}</div>
             <div className="w-14 shrink-0 text-sm font-bold" style={{ color: barColor(s.score) }}>
               {s.score ?? "n/a"}
             </div>
@@ -132,7 +132,7 @@ export function TrustReportCard({
 
       {/* Provenance. A user should always be able to tell whether a model wrote this
           and exactly which bytes were committed on-chain. */}
-      <div className="px-5 py-3 border-t border-[var(--line)] text-[10px] text-[var(--muted)] space-y-1">
+      <div className="px-4 sm:px-5 py-3 border-t border-[var(--line)] text-[10px] text-[var(--muted)] space-y-1">
         <div>
           narrative: {report.model}
           {report.fallbackUsed && " (deterministic fallback — no model output used)"}

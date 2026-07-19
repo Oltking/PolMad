@@ -123,11 +123,11 @@ export default function CheckPage() {
       </div>
 
       <form onSubmit={runCheck} className="panel p-4 space-y-3">
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
           <select
             value={chainId}
             onChange={(e) => setChainId(Number(e.target.value))}
-            className="bg-[var(--surface-2)] border border-[var(--line)] px-3 py-2 text-sm outline-none focus:border-[var(--acid)]"
+            className="w-full sm:w-auto bg-[var(--surface-2)] border border-[var(--line)] px-3 py-2 text-sm outline-none focus:border-[var(--acid)]"
           >
             {SUPPORTED_CHAINS.map((c) => (
               <option key={c.id} value={c.id}>
@@ -141,13 +141,13 @@ export default function CheckPage() {
             onChange={(e) => setAddress(e.target.value)}
             placeholder="0x… contract address"
             spellCheck={false}
-            className="flex-1 min-w-[16rem] bg-[var(--surface-2)] border border-[var(--line)] px-3 py-2 text-sm outline-none focus:border-[var(--acid)]"
+            className="flex-1 min-w-0 w-full sm:w-auto sm:min-w-[16rem] bg-[var(--surface-2)] border border-[var(--line)] px-3 py-2 text-sm outline-none focus:border-[var(--acid)]"
           />
 
           <button
             type="submit"
             disabled={loading || !address.trim()}
-            className="px-5 py-2 text-sm font-bold bg-[var(--acid)] text-black disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110"
+            className="w-full sm:w-auto px-5 py-2.5 sm:py-2 text-sm font-bold bg-[var(--acid)] text-black disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110"
           >
             {loading ? "CHECKING…" : "CHECK"}
           </button>

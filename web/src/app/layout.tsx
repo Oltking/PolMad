@@ -48,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="min-h-full flex flex-col grid-bg">
         <Providers>
           <header className="border-b border-[var(--line)] sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur">
-            <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-6">
+            <div className="mx-auto max-w-6xl px-3 sm:px-4 min-h-14 py-2 sm:py-0 flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6">
               <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="PolMad home">
                 <Image src="/logo-trimmed.png" alt="" width={28} height={28} priority />
                 <span className="font-bold tracking-tight text-[var(--acid)] hidden sm:inline">
@@ -57,17 +57,17 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </Link>
               <ModeSwitch />
               <ModeNav />
-              <div className="ml-auto shrink-0 flex items-center gap-2">
+              <div className="ml-auto shrink-0 flex items-center gap-2 order-2 sm:order-none">
                 <NetworkSwitch />
                 <WalletButton />
               </div>
             </div>
           </header>
 
-          <main className="flex-1 mx-auto max-w-6xl w-full px-4 py-8">{children}</main>
+          <main className="flex-1 mx-auto max-w-6xl w-full px-3 sm:px-4 py-6 sm:py-8">{children}</main>
 
           <footer className="border-t border-[var(--line)] mt-12">
-            <div className="mx-auto max-w-6xl px-4 py-5 text-[11px] leading-relaxed text-[var(--muted)] space-y-1">
+            <div className="mx-auto max-w-6xl px-3 sm:px-4 py-5 text-[11px] leading-relaxed text-[var(--muted)] space-y-1">
               <p>
                 Risk reports are automated signals derived from public data — not an audit, and not
                 financial advice. Absence of a warning is not proof a contract is safe.

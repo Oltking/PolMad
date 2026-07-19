@@ -23,7 +23,7 @@ export function ModeNav() {
   const items = inCreator ? CREATOR_NAV : RADAR_NAV;
 
   return (
-    <nav className="flex gap-4 text-xs text-[var(--muted)] overflow-x-auto">
+    <nav className="flex gap-4 text-xs text-[var(--muted)] overflow-x-auto order-3 sm:order-none w-full sm:w-auto pb-1 sm:pb-0">
       {items.map((n) => {
         const active = n.href === "/" ? pathname === "/" : pathname.startsWith(n.href);
         return (

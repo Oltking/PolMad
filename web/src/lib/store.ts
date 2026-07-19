@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { TrustReport } from "./types";
+import { kvGet, kvSet } from "./kv";
 
 /// Report + feed cache.
 ///
@@ -30,36 +29,39 @@ interface StoreShape {
   feed: FeedEvent[];
 }
 
-const DATA_DIR = process.env.POLYMAD_DATA_DIR ?? path.join(process.cwd(), ".data");
-const DATA_FILE = path.join(DATA_DIR, "store.json");
+const STORE_KEY = "polmad-store";
 const MAX_FEED = 200;
 
 let cache: StoreShape | null = null;
+let loaded = false;
 
-function load(): StoreShape {
-  if (cache) return cache;
+/// Hydrated lazily and cached in-process. On serverless without KV this simply
+/// means a cold cache per instance — reports regenerate, which is acceptable
+/// because everything here is re-derivable from chain data.
+async function ensureLoaded() {
+  if (loaded) return;
+  loaded = true;
+  const raw = await kvGet(STORE_KEY);
   try {
-    cache = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")) as StoreShape;
+    cache = raw ? (JSON.parse(raw) as StoreShape) : { reports: {}, feed: [] };
   } catch {
     cache = { reports: {}, feed: [] };
   }
+}
+
+function load(): StoreShape {
+  if (!cache) cache = { reports: {}, feed: [] };
   return cache;
 }
 
 function persist() {
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(cache, null, 2));
-  } catch (err) {
-    // A cache that cannot write is still a working cache in memory. Never fail a
-    // user-facing request because the disk is read-only.
-    console.warn("[store] persist failed:", (err as Error).message);
-  }
+  void kvSet(STORE_KEY, JSON.stringify(cache));
 }
 
 const key = (chainId: number, address: string) => `${chainId}:${address.toLowerCase()}`;
 
-export function getCachedReport(chainId: number, address: string): TrustReport | null {
+export async function getCachedReport(chainId: number, address: string): Promise<TrustReport | null> {
+  await ensureLoaded();
   return load().reports[key(chainId, address)] ?? null;
 }
 

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     return Response.json({ error: `Unsupported or missing chainId: ${chainId}` }, { status: 400 });
   }
 
-  const cached = getCachedReport(chainId, address);
+  const cached = await getCachedReport(chainId, address);
   if (cached && !force && Date.now() - new Date(cached.generatedAt).getTime() < CACHE_TTL_MS) {
     return Response.json({
       report: cached,

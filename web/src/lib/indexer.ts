@@ -1,7 +1,6 @@
 import { createPublicClient, http, parseAbiItem } from "viem";
-import fs from "node:fs";
-import path from "node:path";
 import { networkFor, isDeployed, type StakingChainId } from "./networks";
+import { kvGet, kvSet, isDurable } from "./kv";
 
 /// Incremental event indexer.
 ///
@@ -56,21 +55,23 @@ interface IndexState {
   resolutions: IndexedResolution[];
 }
 
-const DATA_DIR = process.env.POLMAD_DATA_DIR ?? path.join(process.cwd(), ".data");
 const memory = new Map<number, IndexState>();
 const running = new Map<number, boolean>();
 
-function file(chainId: number) {
-  return path.join(DATA_DIR, `index-${chainId}.json`);
-}
+const key = (chainId: number) => `polmad-index-${chainId}`;
 
-function load(chainId: number): IndexState {
+async function load(chainId: number): Promise<IndexState> {
   const cached = memory.get(chainId);
   if (cached) return cached;
 
   let state: IndexState;
+  const raw = await kvGet(key(chainId));
   try {
-    state = JSON.parse(fs.readFileSync(file(chainId), "utf8")) as IndexState;
+    state = raw
+      ? (JSON.parse(raw) as IndexState)
+      : (() => {
+          throw new Error("empty");
+        })();
   } catch {
     const deployed = networkFor(chainId as StakingChainId).deployment.deployedAtBlock;
     state = { cursor: (deployed ?? 0n).toString(), head: "0", stakes: [], resolutions: [] };
@@ -79,22 +80,15 @@ function load(chainId: number): IndexState {
   return state;
 }
 
-function persist(chainId: number, state: IndexState) {
+async function persist(chainId: number, state: IndexState) {
   memory.set(chainId, state);
-  try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(file(chainId), JSON.stringify(state));
-  } catch (err) {
-    // In-memory index still works for this process; losing the file only means
-    // re-indexing after a restart.
-    console.warn("[indexer] persist failed:", (err as Error).message);
-  }
+  await kvSet(key(chainId), JSON.stringify(state));
 }
 
 /// Advance the index. Safe to call on every request — it is idempotent, bounded,
 /// and skips entirely if another advance is already in flight.
 export async function advanceIndex(chainId: StakingChainId): Promise<IndexState> {
-  const state = load(chainId);
+  const state = await load(chainId);
   const network = networkFor(chainId);
   const market = network.deployment.propheyMarket;
 
@@ -154,7 +148,7 @@ export async function advanceIndex(chainId: StakingChainId): Promise<IndexState>
     }
 
     state.cursor = cursor.toString();
-    persist(chainId, state);
+    await persist(chainId, state);
     return state;
   } finally {
     running.set(chainId, false);
@@ -165,6 +159,9 @@ export interface IndexSnapshot extends IndexState {
   /// True once the cursor has reached chain head — i.e. history is complete.
   synced: boolean;
   progressPct: number;
+  /// False when storage is per-request (no KV configured on serverless), meaning
+  /// history cannot accumulate. Surfaced rather than hidden.
+  durable: boolean;
 }
 
 /// Self-driving catch-up. Without this the index only advanced when a request
@@ -173,8 +170,12 @@ export interface IndexSnapshot extends IndexState {
 /// then idles, polling for new blocks.
 const pumping = new Set<number>();
 
+const IS_SERVERLESS = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 function startPump(chainId: StakingChainId) {
-  if (pumping.has(chainId)) return;
+  // On serverless the process is frozen as soon as the response is sent, so a
+  // timer loop would never fire. There, /api/cron/index does this job instead.
+  if (IS_SERVERLESS || pumping.has(chainId)) return;
   pumping.add(chainId);
 
   const tick = async () => {
@@ -207,5 +208,6 @@ export async function getIndex(chainId: StakingChainId): Promise<IndexSnapshot> 
     ...state,
     synced,
     progressPct: synced ? 100 : Math.min(99, Number((done * 100n) / total)),
+    durable: isDurable(),
   };
 }

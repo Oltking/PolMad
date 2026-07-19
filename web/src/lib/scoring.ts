@@ -224,11 +224,16 @@ export function computeOverallScore(subScores: SubScore[]): {
   const weighted = known.reduce((acc, s) => acc + (s.score as number) * (weights[s.key] ?? 0), 0);
   const score = Math.round(weighted / totalWeight);
 
-  // If we're missing most of the picture, say so rather than issuing a confident
-  // verdict off two signals.
+  // Coverage threshold: how much of the weighted picture we need before committing
+  // to a verdict. Set at 0.4 rather than 0.5 because on Monad two inputs are
+  // structurally unavailable — source verification (no explorer API) and, for many
+  // tokens, ownership (no owner() function) — so a legitimate Monad token with real
+  // liquidity, no mint backdoor, and a live community was scoring as "not scorable",
+  // which reads as broken. 0.4 still requires the mint/bytecode analysis (0.3) plus
+  // at least one more real signal, so it never issues a verdict off a single input.
   const coverage = totalWeight;
   let verdict: TrustReport["verdict"];
-  if (coverage < 0.5) verdict = "INSUFFICIENT_DATA";
+  if (coverage < 0.4) verdict = "INSUFFICIENT_DATA";
   else if (score >= 70) verdict = "HIGH_RISK";
   else if (score >= 40) verdict = "ELEVATED";
   else verdict = "LOW_RISK";

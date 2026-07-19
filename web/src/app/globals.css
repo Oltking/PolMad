@@ -70,3 +70,26 @@ body {
   background: var(--acid);
   color: #08090a;
 }
+
+/* Shared form + button primitives for the creator flow. */
+.input {
+  margin-top: 0.25rem;
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  outline: none;
+  color: var(--fg);
+}
+.input:focus { border-color: var(--acid); }
+
+.btn-ghost {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.btn-ghost:hover { border-color: var(--acid); color: var(--acid); }

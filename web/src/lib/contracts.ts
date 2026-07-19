@@ -32,6 +32,24 @@ export const verifierBadgeAbi = parseAbi([
   "function badgeTypeOf(uint256 tokenId) view returns (uint256)",
 ]);
 
+export const tokenFactoryAbi = parseAbi([
+  "function createToken(string name_, string symbol_, uint8 decimals_, uint256 initialSupply, string metadataURI) returns (address)",
+  "function launchCount() view returns (uint256)",
+  "function isLaunchpadToken(address) view returns (bool)",
+  "function recentLaunches(uint256 offset, uint256 limit) view returns ((address token, address creator, string name, string symbol, uint256 supply, uint256 timestamp)[])",
+  "function launchesOf(address creator) view returns ((address token, address creator, string name, string symbol, uint256 supply, uint256 timestamp)[])",
+  "event TokenLaunched(address indexed token, address indexed creator, string name, string symbol, uint256 supply, string metadataURI)",
+]);
+
+export const launchpadTokenAbi = parseAbi([
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function creator() view returns (address)",
+  "function metadataURI() view returns (string)",
+]);
+
 export const BADGE_NAMES = [
   "First Correct Call",
   "Five-Call Streak",

@@ -25,6 +25,7 @@ export interface Deployment {
   propheyMarket: Address;
   trustRegistry: Address;
   verifierBadge: Address;
+  tokenFactory: Address;
   /// Demo-only rug token. Testnet only — deploying this to mainnet would be
   /// publishing a working scam contract, so it stays undefined there.
   mockRugToken?: Address;
@@ -38,6 +39,7 @@ const TESTNET_DEPLOYMENT: Deployment = {
   propheyMarket: (process.env.NEXT_PUBLIC_PROPHEY_MARKET ?? ZERO) as Address,
   trustRegistry: (process.env.NEXT_PUBLIC_TRUST_REGISTRY ?? ZERO) as Address,
   verifierBadge: (process.env.NEXT_PUBLIC_VERIFIER_BADGE ?? ZERO) as Address,
+  tokenFactory: (process.env.NEXT_PUBLIC_TOKEN_FACTORY ?? ZERO) as Address,
   mockRugToken: process.env.NEXT_PUBLIC_MOCK_RUG_TOKEN as Address | undefined,
 };
 
@@ -45,6 +47,7 @@ const MAINNET_DEPLOYMENT: Deployment = {
   propheyMarket: (process.env.NEXT_PUBLIC_PROPHEY_MARKET_MAINNET ?? ZERO) as Address,
   trustRegistry: (process.env.NEXT_PUBLIC_TRUST_REGISTRY_MAINNET ?? ZERO) as Address,
   verifierBadge: (process.env.NEXT_PUBLIC_VERIFIER_BADGE_MAINNET ?? ZERO) as Address,
+  tokenFactory: (process.env.NEXT_PUBLIC_TOKEN_FACTORY_MAINNET ?? ZERO) as Address,
 };
 
 export interface StakingNetwork {

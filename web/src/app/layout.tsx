@@ -5,6 +5,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { WalletButton } from "@/components/WalletButton";
 import { NetworkSwitch } from "@/components/NetworkSwitch";
+import { ModeSwitch } from "@/components/ModeSwitch";
+import { ModeNav } from "@/components/ModeNav";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -17,13 +19,6 @@ export const metadata: Metadata = {
     "Free cross-chain contract risk reports, plus a Monad-native prediction market where people stake real MON on whether a contract rugs.",
 };
 
-const NAV = [
-  { href: "/", label: "CHECK" },
-  { href: "/calls", label: "CALLS" },
-  { href: "/feed", label: "FEED" },
-  { href: "/leaderboard", label: "LEADERBOARD" },
-];
-
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistMono.variable} h-full antialiased`}>
@@ -34,13 +29,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <Link href="/" className="font-bold tracking-tight text-[var(--acid)] shrink-0">
                 POLYMAD
               </Link>
-              <nav className="flex gap-4 text-xs text-[var(--muted)] overflow-x-auto">
-                {NAV.map((n) => (
-                  <Link key={n.href} href={n.href} className="hover:text-[var(--fg)] whitespace-nowrap py-1">
-                    {n.label}
-                  </Link>
-                ))}
-              </nav>
+              <ModeSwitch />
+              <ModeNav />
               <div className="ml-auto shrink-0 flex items-center gap-2">
                 <NetworkSwitch />
                 <WalletButton />

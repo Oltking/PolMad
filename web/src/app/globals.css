@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* Polymad reads as a trading terminal / departure board, not a SaaS dashboard:
+   monospace throughout, hard corners, hairline rules, one acid accent. The visual
+   language is "instrument you read fast under pressure", which is what someone
+   about to sign a transaction is actually doing. */
+
+:root {
+  --bg: #08090a;
+  --surface: #0f1113;
+  --surface-2: #15181b;
+  --line: #23282d;
+  --fg: #e8eaed;
+  --muted: #8b949e;
+
+  --acid: #c8ff2f;
+  --safe: #3ddc97;
+  --rug: #ff4d5e;
+  --warn: #ffb703;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-acid: var(--acid);
+  --color-safe: var(--safe);
+  --color-rug: var(--rug);
+  --color-warn: var(--warn);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-feature-settings: "tnum" 1; /* tabular figures: numbers must not jitter as odds move */
+}
+
+/* Hairline grid backdrop — subtle instrument-panel texture, no gradients. */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+/* Live indicator: a slow pulse, not a spinner. Signals "this number is moving". */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-dot {
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+}
+
+::selection {
+  background: var(--acid);
+  color: #08090a;
+}

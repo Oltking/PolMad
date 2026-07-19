@@ -8,3 +8,7 @@ node_modules/
 .data/
 .next/
 *.log
+
+# Third-party agent skills — vendored tooling, not project source.
+.agents/
+skills-lock.json

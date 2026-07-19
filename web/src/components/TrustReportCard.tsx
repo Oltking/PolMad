@@ -174,6 +174,37 @@ export function TrustReportCard({
         )}
       </div>
 
+      {/* Discoverable presence, linked so a user can judge it themselves rather
+          than trusting our score of it. Social proof is the most gameable input
+          here, so seeing it beats being told about it. */}
+      {report.evidence.social?.hasAnyPresence && (
+        <div className="px-4 sm:px-5 py-3 border-t border-[var(--line)] flex flex-wrap gap-2 items-center">
+          <span className="text-[10px] text-[var(--muted)] tracking-widest">LINKS</span>
+          {report.evidence.social.website && (
+            <SocialLink href={report.evidence.social.website} label="WEBSITE" />
+          )}
+          {report.evidence.social.twitter && (
+            <SocialLink
+              href={`https://x.com/${report.evidence.social.twitter}`}
+              label={`@${report.evidence.social.twitter}`}
+            />
+          )}
+          {report.evidence.social.telegram && (
+            <SocialLink
+              href={`https://t.me/${report.evidence.social.telegram}`}
+              label="TELEGRAM"
+            />
+          )}
+          {report.evidence.social.discord && (
+            <SocialLink href={report.evidence.social.discord} label="DISCORD" />
+          )}
+          <span className="text-[10px] text-[var(--muted)] w-full">
+            Check these yourself — a live account proves someone made one, not that the contract is
+            safe.
+          </span>
+        </div>
+      )}
+
       {report.evidence.gaps.length > 0 && (
         <details className="px-5 py-3 border-t border-[var(--line)]">
           <summary className="text-[11px] text-[var(--muted)] cursor-pointer">
@@ -189,6 +220,19 @@ export function TrustReportCard({
         </details>
       )}
     </section>
+  );
+}
+
+function SocialLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="px-2 py-0.5 text-[10px] border border-[var(--line)] text-[var(--muted)] hover:border-[var(--acid)] hover:text-[var(--acid)]"
+    >
+      {label} ↗
+    </a>
   );
 }
 

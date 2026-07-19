@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   liquidity: "Liquidity",
   holderConcentration: "Holder concentration",
   verification: "Source verification",
+  community: "Community & social presence",
   mintBurnControl: "Mint & burn control",
 };
 
@@ -144,7 +145,58 @@ export function computeSubScores(e: RawEvidence): SubScore[] {
     unavailableReason: "Holder distribution requires an indexer or paid explorer tier.",
   };
 
-  return [ownership, liquidity, holders, verification, mintBurn];
+  // Community presence. Scored asymmetrically on purpose — see social.ts.
+  // Absence is strong evidence of risk; presence is weak evidence of safety,
+  // because followers and Telegram members are cheap to buy.
+  const community: SubScore = { key: "community", label: LABELS.community, score: null, findings: [] };
+  const soc = e.social;
+
+  if (!soc || !soc.checked) {
+    community.unavailableReason =
+      soc?.unavailableReason ??
+      "Community presence could not be checked on this network. Unverified, not absent.";
+  } else if (!soc.hasAnyPresence) {
+    // No site, no socials, nothing. Real projects leave traces.
+    community.score = 80;
+    community.findings.push(
+      "No website, Twitter, Telegram or Discord found on any public index. Legitimate projects are almost always discoverable.",
+    );
+  } else {
+    let score = 45; // having *something* is the baseline, not a pass
+    const present: string[] = [];
+    if (soc.website) present.push("website");
+    if (soc.twitter) present.push(`Twitter (@${soc.twitter})`);
+    if (soc.telegram) present.push("Telegram");
+    if (soc.discord) present.push("Discord");
+    community.findings.push(`Public presence: ${present.join(", ")}.`);
+
+    // Each additional channel lowers risk a little, and the floor stops social
+    // proof alone from ever certifying a contract as safe.
+    score -= Math.min(20, present.length * 7);
+
+    if (soc.gtScore !== null && soc.gtScore !== undefined) {
+      community.findings.push(`Listing completeness score ${Math.round(soc.gtScore)}/100 (profile depth, not safety).`);
+      if (soc.gtScore >= 70) score -= 8;
+      else if (soc.gtScore < 30) score += 10;
+    }
+
+    if (soc.watchlistUsers) {
+      community.findings.push(`${soc.watchlistUsers.toLocaleString()} people track this token publicly.`);
+      if (soc.watchlistUsers > 10_000) score -= 10;
+    }
+    if (soc.telegramUsers) {
+      community.findings.push(`${soc.telegramUsers.toLocaleString()} Telegram members.`);
+    }
+    if (soc.sentimentUpPct !== null && soc.sentimentUpPct !== undefined) {
+      community.findings.push(`Community sentiment ${Math.round(soc.sentimentUpPct)}% positive — a popularity signal, not a safety one.`);
+    }
+
+    // Never below 15: social proof is the most gameable input in this report and
+    // must not be able to certify anything as safe on its own.
+    community.score = Math.max(15, Math.min(100, score));
+  }
+
+  return [ownership, liquidity, holders, verification, mintBurn, community];
 }
 
 /// Weighted mean over the sub-scores we could actually compute. Missing categories
@@ -160,6 +212,9 @@ export function computeOverallScore(subScores: SubScore[]): {
     verification: 0.2,
     liquidity: 0.1,
     holderConcentration: 0.1,
+    // Weighted low deliberately: it is the easiest signal to fake, so it informs
+    // rather than decides.
+    community: 0.08,
   };
 
   const known = subScores.filter((s) => s.score !== null);

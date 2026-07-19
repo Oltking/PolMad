@@ -7,7 +7,8 @@ export type SubScoreKey =
   | "liquidity"
   | "holderConcentration"
   | "verification"
-  | "mintBurnControl";
+  | "mintBurnControl"
+  | "community";
 
 export interface SubScore {
   key: SubScoreKey;
@@ -49,6 +50,19 @@ export interface RawEvidence {
     totalLiquidityUsd?: number | null;
     topPoolShare?: number | null;
     pools: { address: string; name: string; reserveUsd: number | null; createdAt?: string }[];
+  };
+  social?: {
+    checked: boolean;
+    unavailableReason?: string;
+    website?: string | null;
+    twitter?: string | null;
+    telegram?: string | null;
+    discord?: string | null;
+    gtScore?: number | null;
+    telegramUsers?: number | null;
+    watchlistUsers?: number | null;
+    sentimentUpPct?: number | null;
+    hasAnyPresence: boolean;
   };
   /// Anything we tried to fetch and couldn't. Surfaced to the user verbatim.
   gaps: string[];

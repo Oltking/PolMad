@@ -2,6 +2,7 @@ import { createPublicClient, http, isAddress, getAddress, parseAbi, type Address
 import { chainById } from "./chains";
 import type { RawEvidence } from "./types";
 import { fetchMarketData } from "./marketData";
+import { fetchSocial } from "./social";
 
 /// Gathers the on-chain and explorer facts a Trust Report is built from.
 ///
@@ -115,9 +116,10 @@ export async function gatherEvidence(chainId: number, rawAddress: string): Promi
   if (owner === null) gaps.push("No `owner()` function — ownership model could not be determined from on-chain reads.");
   if (totalSupply === null) gaps.push("No `totalSupply()` — target may not be an ERC-20.");
 
-  const [source, market] = await Promise.all([
+  const [source, market, social] = await Promise.all([
     chain.explorerApi ? fetchSource(chain.explorerApi, chainId, address) : Promise.resolve(null),
     fetchMarketData(chainId, address),
+    fetchSocial(chainId, address),
   ]);
   if (!chain.explorerApi) {
     gaps.push(`No explorer API configured for ${chain.label}; verification status and source-level checks unavailable.`);
@@ -155,6 +157,19 @@ export async function gatherEvidence(chainId: number, rawAddress: string): Promi
         reserveUsd: p.reserveUsd,
         createdAt: p.createdAt,
       })),
+    },
+    social: {
+      checked: social.checked,
+      unavailableReason: social.unavailableReason,
+      website: social.website,
+      twitter: social.twitter,
+      telegram: social.telegram,
+      discord: social.discord,
+      gtScore: social.gtScore,
+      telegramUsers: social.telegramUsers,
+      watchlistUsers: social.watchlistUsers,
+      sentimentUpPct: social.sentimentUpPct,
+      hasAnyPresence: social.hasAnyPresence,
     },
     deployer: source?.deployer ?? null,
     gaps: [

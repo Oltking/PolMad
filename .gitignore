@@ -12,3 +12,5 @@ node_modules/
 # Third-party agent skills — vendored tooling, not project source.
 .agents/
 skills-lock.json
+
+contracts/lib/

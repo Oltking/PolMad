@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   useAccount,
@@ -8,7 +8,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { propheyMarketAbi } from "@/lib/contracts";
+import { propheyMarketAbi, BADGE_NAMES } from "@/lib/contracts";
 import { chainById } from "@/lib/chains";
 import { useNetwork } from "@/lib/network-context";
 import { isNetworkLive } from "@/lib/networks";
@@ -25,6 +25,8 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
   const market = network.deployment.propheyMarket;
   const live = isNetworkLive(network);
   const [staking, setStaking] = useState(false);
+  const [badges, setBadges] = useState<{ badgeType: number; txHash: string }[]>([]);
+  const [badgeChecked, setBadgeChecked] = useState(false);
 
   const { data: call, refetch } = useReadContract({
     address: market,
@@ -55,6 +57,24 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
 
   const { writeContract, data: txHash, isPending, error } = useWriteContract();
   const { isLoading: confirming, isSuccess: claimed } = useWaitForTransactionReceipt({ hash: txHash });
+
+  /// Milestones are evaluated after a claim, because claiming is the moment a
+  /// correct call becomes final. Eligibility is recomputed server-side from
+  /// on-chain events — nothing the client sends can influence it.
+  useEffect(() => {
+    if (!claimed || !address || badgeChecked) return;
+    setBadgeChecked(true);
+    fetch("/api/badges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: address, chainId: network.id }),
+    })
+      .then((r) => r.json())
+      .then((j) => setBadges(j.minted ?? []))
+      .catch(() => {
+        /* badges are a reward, never a blocker on getting paid */
+      });
+  }, [claimed, address, badgeChecked, network.id]);
 
   if (!live) {
     return (
@@ -186,6 +206,28 @@ export default function CallDetailPage({ params }: { params: Promise<{ id: strin
                 >
                   {isPending ? "CONFIRM IN WALLET…" : confirming ? "PENDING…" : "CLAIM PAYOUT"}
                 </button>
+              </div>
+            )}
+
+            {badges.length > 0 && (
+              <div className="border border-[var(--acid)] p-3 space-y-1">
+                <div className="text-[10px] tracking-widest text-[var(--acid)]">BADGE EARNED</div>
+                {badges.map((b) => (
+                  <div key={b.txHash} className="text-[11px]">
+                    {BADGE_NAMES[b.badgeType] ?? `Badge #${b.badgeType}`}{" "}
+                    <a
+                      href={`${network.chain.blockExplorers.default.url}/tx/${b.txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[var(--acid)] hover:underline"
+                    >
+                      ↗
+                    </a>
+                  </div>
+                ))}
+                <Link href={`/profile/${address}`} className="text-[10px] text-[var(--muted)] hover:text-[var(--fg)]">
+                  view your profile →
+                </Link>
               </div>
             )}
 

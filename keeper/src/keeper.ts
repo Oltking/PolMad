@@ -15,6 +15,7 @@ import {
   DEFAULT_DETECTOR_CONFIG,
   type RugFinding,
 } from "./detectors.js";
+import { lookupPools } from "./pools.js";
 
 /// PolMad keeper.
 ///
@@ -139,11 +140,23 @@ async function checkForRug(
     const baselineSupply = await client
       .readContract({ address: target, abi: erc20Abi, functionName: "totalSupply" })
       .catch(() => 0n);
+    // Pools are looked up from a DEX index, never guessed. If none are found the
+    // LIQUIDITY_PULL trigger simply cannot fire for this target, and we say so
+    // rather than letting silence imply "no liquidity was pulled".
+    const lookup = await lookupPools(chainId, target);
+    if (lookup.pools.length > 0) {
+      console.log(`[keeper] call ${callId}: watching ${lookup.pools.length} pool(s) for liquidity pulls`);
+    } else {
+      console.warn(
+        `[keeper] call ${callId}: no pools found (${lookup.reason ?? "none returned"}) — LIQUIDITY_PULL cannot trigger for this target`,
+      );
+    }
+
     s = {
       baselineSupply,
       baselineBlock: head > LOOKBACK_BLOCKS ? head - LOOKBACK_BLOCKS : 0n,
       lastScannedBlock: head > LOOKBACK_BLOCKS ? head - LOOKBACK_BLOCKS : 0n,
-      liquidityPools: discoverPools(target),
+      liquidityPools: lookup.pools,
     };
     state.set(key, s);
   }
@@ -162,19 +175,6 @@ async function checkForRug(
 
   s.lastScannedBlock = toBlock;
   return findings.find((f): f is RugFinding => f !== null) ?? null;
-}
-
-/// Pools are supplied out-of-band (env or, later, the report service's LP lookup).
-/// We deliberately do NOT guess pool addresses by computing pair addresses for a
-/// hardcoded factory — a wrong pool address means we watch the wrong balance and
-/// could resolve a Call incorrectly, which costs users real money.
-function discoverPools(target: Address): Address[] {
-  const raw = process.env[`POOLS_${target.toUpperCase()}`] ?? process.env.DEFAULT_POOLS ?? "";
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => getAddress(s));
 }
 
 async function submitResolution(callId: bigint, rugOccurred: boolean, finding?: RugFinding) {

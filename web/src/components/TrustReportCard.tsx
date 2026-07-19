@@ -10,7 +10,27 @@ const VERDICT_STYLE: Record<TrustReport["verdict"], { label: string; color: stri
   INSUFFICIENT_DATA: { label: "INSUFFICIENT DATA", color: "var(--muted)" },
 };
 
-export function TrustReportCard({ report, reportHash }: { report: TrustReport; reportHash: string }) {
+export interface Attestation {
+  attested?: boolean;
+  txHash?: string;
+  reason?: string;
+  riskScore?: number;
+  reportHash?: string;
+  attester?: string;
+  timestamp?: number;
+}
+
+export function TrustReportCard({
+  report,
+  reportHash,
+  attestation,
+  explorerUrl,
+}: {
+  report: TrustReport;
+  reportHash: string;
+  attestation?: Attestation | null;
+  explorerUrl?: string;
+}) {
   const verdict = VERDICT_STYLE[report.verdict];
   const chain = chainById(report.chainId);
   const scored = report.verdict !== "INSUFFICIENT_DATA";
@@ -119,6 +139,39 @@ export function TrustReportCard({ report, reportHash }: { report: TrustReport; r
         </div>
         <div className="break-all">report hash: {reportHash}</div>
         <div>generated: {new Date(report.generatedAt).toLocaleString()}</div>
+
+        {/* On-chain provenance. This is the difference between a webpage claiming
+            something and a claim anyone can verify independently. */}
+        {attestation?.txHash && explorerUrl && (
+          <div className="pt-1">
+            <span style={{ color: "var(--safe)" }}>✓ committed on-chain</span>{" "}
+            <a
+              href={`${explorerUrl}/tx/${attestation.txHash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[var(--acid)] hover:underline break-all"
+            >
+              {attestation.txHash.slice(0, 18)}…
+            </a>
+          </div>
+        )}
+        {attestation?.reportHash && !attestation.txHash && (
+          <div className="pt-1">
+            {attestation.reportHash.toLowerCase() === reportHash.toLowerCase() ? (
+              <span style={{ color: "var(--safe)" }}>
+                ✓ matches the attestation already recorded on-chain
+              </span>
+            ) : (
+              <span style={{ color: "var(--warn)" }}>
+                ⚠ an earlier attestation exists with a different hash (score{" "}
+                {attestation.riskScore}) — the contract or our data has changed since
+              </span>
+            )}
+          </div>
+        )}
+        {attestation && !attestation.txHash && !attestation.reportHash && attestation.reason && (
+          <div className="pt-1 text-[var(--muted)]">not committed on-chain: {attestation.reason}</div>
+        )}
       </div>
 
       {report.evidence.gaps.length > 0 && (

@@ -8,6 +8,8 @@ import { TrustReportCard } from "@/components/TrustReportCard";
 import type { TrustReport } from "@/lib/types";
 import { CheckHistory } from "@/components/CheckHistory";
 import { saveCheck, getCheck, type CheckHistoryEntry } from "@/lib/checkHistory";
+import type { Attestation } from "@/components/TrustReportCard";
+import { STAKING_NETWORKS, DEFAULT_STAKING_CHAIN } from "@/lib/networks";
 
 /// Loop 1 — Check. Free, chain-agnostic, no wallet. This page must never require
 /// a connection: it is the entire top of the funnel (spec §3.3).
@@ -21,6 +23,7 @@ export default function CheckPage() {
   const [loading, setLoading] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
   const [fromCache, setFromCache] = useState(false);
+  const [attestation, setAttestation] = useState<Attestation | null>(null);
 
   // Deep links from the feed, launches list, and launch success screen.
   useEffect(() => {
@@ -57,6 +60,7 @@ export default function CheckPage() {
       if (!res.ok) throw new Error(json.error ?? "Report failed");
       setReport(json.report);
       setReportHash(json.reportHash);
+      setAttestation(json.attestation ?? null);
       setFromCache(false);
       saveCheck(json.report, json.reportHash);
       setHistoryKey((k) => k + 1);
@@ -91,6 +95,7 @@ export default function CheckPage() {
       if (!res.ok) throw new Error(json.error ?? "Report failed");
       setReport(json.report);
       setReportHash(json.reportHash);
+      setAttestation(json.attestation ?? null);
       setFromCache(false);
       saveCheck(json.report, json.reportHash);
       setHistoryKey((k) => k + 1);
@@ -184,7 +189,12 @@ export default function CheckPage() {
               </button>
             </div>
           )}
-          <TrustReportCard report={report} reportHash={reportHash} />
+          <TrustReportCard
+            report={report}
+            reportHash={reportHash}
+            attestation={attestation}
+            explorerUrl={STAKING_NETWORKS[DEFAULT_STAKING_CHAIN].chain.blockExplorers.default.url}
+          />
 
           <div className="panel p-4 flex flex-wrap items-center gap-4">
             <div className="text-xs text-[var(--muted)] flex-1 min-w-[14rem]">

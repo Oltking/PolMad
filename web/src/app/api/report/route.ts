@@ -5,6 +5,7 @@ import { generateNarrative } from "@/lib/llm";
 import { chainById } from "@/lib/chains";
 import { getCachedReport, putCachedReport } from "@/lib/store";
 import type { TrustReport } from "@/lib/types";
+import { attestReport, readLatestAttestation } from "@/lib/attest";
 
 /// GET /api/report?chainId=1&address=0x...
 ///
@@ -30,7 +31,12 @@ export async function GET(request: Request) {
 
   const cached = getCachedReport(chainId, address);
   if (cached && !force && Date.now() - new Date(cached.generatedAt).getTime() < CACHE_TTL_MS) {
-    return Response.json({ report: cached, reportHash: hashReport(cached), cached: true });
+    return Response.json({
+      report: cached,
+      reportHash: hashReport(cached),
+      cached: true,
+      attestation: await readLatestAttestation(chainId, address),
+    });
   }
 
   try {
@@ -56,10 +62,15 @@ export async function GET(request: Request) {
 
     putCachedReport(report);
 
-    // The hash is what gets committed to TrustRegistry, so it must be taken over
-    // exactly the bytes the client receives — otherwise the on-chain attestation
-    // proves nothing about the report anyone actually saw.
-    return Response.json({ report, reportHash: hashReport(report), cached: false });
+    // The hash is taken over exactly the bytes the client receives — otherwise the
+    // on-chain attestation proves nothing about the report anyone actually saw.
+    const reportHash = hashReport(report);
+
+    // Commit the hash on-chain. Awaited so the UI can show the transaction, but a
+    // failure only omits the attestation — it never fails the report itself.
+    const attestation = await attestReport(chainId, address, report.riskScore, reportHash);
+
+    return Response.json({ report, reportHash, cached: false, attestation });
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 });
   }
